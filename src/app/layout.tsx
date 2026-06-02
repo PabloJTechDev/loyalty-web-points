@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'Loyalty Platform · Customer MVP',
-  description: 'Primera versión del vertical customer para loyalty platform.',
+  description: 'Primera versión multi-idioma del vertical customer para loyalty platform.',
 };
 
 export default function RootLayout({
@@ -22,9 +22,5 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    <html lang="es" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body>{children}</body>
-    </html>
-  );
+  return <html suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable}`}><body>{children}</body></html>;
 }

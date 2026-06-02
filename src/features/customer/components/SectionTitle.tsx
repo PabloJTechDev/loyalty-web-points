@@ -1,3 +1,3 @@
 export function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h2 style={{ margin: 0, fontSize: 22 }}>{children}</h2>;
+  return <h2 className="section-title">{children}</h2>;
 }
