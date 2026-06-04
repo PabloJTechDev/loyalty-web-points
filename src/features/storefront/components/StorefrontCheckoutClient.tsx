@@ -9,7 +9,7 @@ import { useDemoCart } from '@/features/storefront/hooks/useDemoCart';
 import { buildStorefrontFallbackQuote } from '@/lib/storefront/quote';
 
 interface ReservationFeedback {
-  status?: 'reserved' | 'simulated' | 'rejected';
+  status?: 'reserved' | 'simulated' | 'rejected' | 'confirmed' | 'cancelled';
   reservedPoints?: number;
   coveredUsd?: number;
   payableUsd?: number;
@@ -18,6 +18,10 @@ interface ReservationFeedback {
   message?: string;
   source?: string;
   integrationError?: string;
+  actionStatus?: 'confirmed' | 'cancelled' | 'rejected';
+  actionType?: 'confirm' | 'cancel';
+  actionMessage?: string;
+  releasedPoints?: number;
 }
 
 interface StorefrontCheckoutClientProps {
@@ -34,6 +38,10 @@ function formatUsd(amount: number, locale: Locale) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(amount);
+}
+
+function hasActiveReservation(status?: ReservationFeedback['status']) {
+  return status === 'reserved' || status === 'simulated';
 }
 
 export function StorefrontCheckoutClient({
@@ -110,11 +118,28 @@ export function StorefrontCheckoutClient({
         quantity: 'Cantidad',
         reserveSource: 'Fuente reserva',
         reserveResult: 'Resultado reserva',
+        reservationState: 'Estado visible',
+        requestedVisible: 'Puntos solicitados',
+        releasedVisible: 'Puntos liberados',
+        statePending: 'Pendiente de confirmación',
+        stateConfirmed: 'Confirmada',
+        stateCancelled: 'Cancelada',
+        stateRejected: 'No disponible',
         simulated: 'Reserva simulada',
-        reserved: 'Reserva confirmada',
+        reserved: 'Reserva confirmada en BFF',
+        confirmed: 'Reserva confirmada en checkout',
+        cancelled: 'Reserva cancelada en checkout',
         rejected: 'Reserva rechazada',
         reservationId: 'reservationId',
         integrationError: 'Último error integración',
+        confirmButton: 'Confirmar reserva',
+        cancelButton: 'Cancelar reserva',
+        actionResult: 'Acción aplicada',
+        actionConfirm: 'Confirmación ejecutada',
+        actionCancel: 'Cancelación ejecutada',
+        noReservationActions: 'Primero necesitas una reserva activa para confirmar o cancelar.',
+        reservationPanelTitle: 'Estado de la reserva',
+        reservationPanelDescription: 'El checkout deja visible el estado actual y ofrece acciones de confirmación/cancelación sobre la reserva más reciente.',
       }
     : {
         loading: 'Loading checkout…',
@@ -142,16 +167,35 @@ export function StorefrontCheckoutClient({
         quantity: 'Quantity',
         reserveSource: 'Reserve source',
         reserveResult: 'Reserve result',
+        reservationState: 'Visible state',
+        requestedVisible: 'Requested points',
+        releasedVisible: 'Released points',
+        statePending: 'Pending confirmation',
+        stateConfirmed: 'Confirmed',
+        stateCancelled: 'Cancelled',
+        stateRejected: 'Unavailable',
         simulated: 'Simulated reservation',
-        reserved: 'Reservation confirmed',
+        reserved: 'Reservation confirmed by BFF',
+        confirmed: 'Reservation confirmed in checkout',
+        cancelled: 'Reservation cancelled in checkout',
         rejected: 'Reservation rejected',
         reservationId: 'reservationId',
         integrationError: 'Latest integration error',
+        confirmButton: 'Confirm reservation',
+        cancelButton: 'Cancel reservation',
+        actionResult: 'Action result',
+        actionConfirm: 'Confirmation executed',
+        actionCancel: 'Cancellation executed',
+        noReservationActions: 'You need an active reservation first before confirming or cancelling.',
+        reservationPanelTitle: 'Reservation state',
+        reservationPanelDescription: 'Checkout keeps the latest reservation visible and exposes confirm/cancel actions on top of it.',
       };
 
-  const feedbackTone = feedback?.status === 'rejected'
+  const activeReservation = hasActiveReservation(feedback?.status);
+
+  const feedbackTone = feedback?.status === 'rejected' || feedback?.actionStatus === 'rejected'
     ? 'trace-notice trace-notice--error'
-    : feedback?.status
+    : feedback?.status || feedback?.actionStatus
       ? 'trace-notice trace-notice--success'
       : '';
 
@@ -161,7 +205,27 @@ export function StorefrontCheckoutClient({
       ? copy.rejected
       : feedback?.status === 'simulated'
         ? copy.simulated
-        : null;
+        : feedback?.status === 'confirmed'
+          ? copy.confirmed
+          : feedback?.status === 'cancelled'
+            ? copy.cancelled
+            : null;
+
+  const actionTitle = feedback?.actionType === 'confirm'
+    ? copy.actionConfirm
+    : feedback?.actionType === 'cancel'
+      ? copy.actionCancel
+      : null;
+
+  const visibleStateLabel = feedback?.status === 'confirmed'
+    ? copy.stateConfirmed
+    : feedback?.status === 'cancelled'
+      ? copy.stateCancelled
+      : feedback?.status === 'rejected'
+        ? copy.stateRejected
+        : activeReservation
+          ? copy.statePending
+          : copy.stateRejected;
 
   if (!isHydrated) {
     return <p className="muted">{copy.loading}</p>;
@@ -208,12 +272,58 @@ export function StorefrontCheckoutClient({
           </div>
         </div>
 
+        <div className="customer-card customer-card--soft">
+          <div className="stack stack--sm storefront-reservation-state">
+            <span className="section-kicker">{copy.reservationPanelTitle}</span>
+            <p className="muted">{copy.reservationPanelDescription}</p>
+            <div className="data-list">
+              <div className="data-row">
+                <span className="data-label">{copy.reservationState}</span>
+                <span className="data-value">
+                  <span className={`info-chip ${activeReservation ? 'info-chip--success' : ''}`}>{visibleStateLabel}</span>
+                </span>
+              </div>
+              <div className="data-row">
+                <span className="data-label">{copy.requestedVisible}</span>
+                <span className="data-value">{formatPoints(feedback?.requestedPoints ?? quote.summary.appliedPoints, locale)} pts</span>
+              </div>
+              <div className="data-row">
+                <span className="data-label">{copy.pointsToReserve}</span>
+                <span className="data-value">{formatPoints(feedback?.reservedPoints ?? quote.summary.appliedPoints, locale)} pts</span>
+              </div>
+              {typeof feedback?.releasedPoints === 'number' ? (
+                <div className="data-row">
+                  <span className="data-label">{copy.releasedVisible}</span>
+                  <span className="data-value">{formatPoints(feedback.releasedPoints, locale)} pts</span>
+                </div>
+              ) : null}
+              {feedback?.reservationId ? (
+                <div className="data-row">
+                  <span className="data-label">{copy.reservationId}</span>
+                  <span className="data-value">{feedback.reservationId}</span>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
         {feedbackTitle && feedback?.message ? (
           <div className={feedbackTone}>
             <strong>{copy.reserveResult}: {feedbackTitle}</strong>
             <p>{feedback.message}</p>
             {feedback.reservationId ? <p>{copy.reservationId}: {feedback.reservationId}</p> : null}
             {feedback.source ? <p>{copy.reserveSource}: {feedback.source}</p> : null}
+            {feedback.integrationError ? <p>{copy.integrationError}: {feedback.integrationError}</p> : null}
+          </div>
+        ) : null}
+
+        {actionTitle && feedback?.actionMessage ? (
+          <div className={feedbackTone}>
+            <strong>{copy.actionResult}: {actionTitle}</strong>
+            <p>{feedback.actionMessage}</p>
+            {typeof feedback.releasedPoints === 'number' ? (
+              <p>{copy.releasedVisible}: {formatPoints(feedback.releasedPoints, locale)} pts</p>
+            ) : null}
             {feedback.integrationError ? <p>{copy.integrationError}: {feedback.integrationError}</p> : null}
           </div>
         ) : null}
@@ -262,15 +372,15 @@ export function StorefrontCheckoutClient({
             </div>
             <div className="data-row">
               <span className="data-label">{copy.pointsToReserve}</span>
-              <span className="data-value">{formatPoints(quote.summary.appliedPoints, locale)} pts</span>
+              <span className="data-value">{formatPoints(feedback?.reservedPoints ?? quote.summary.appliedPoints, locale)} pts</span>
             </div>
             <div className="data-row">
               <span className="data-label">{copy.coveredAmount}</span>
-              <span className="data-value">-{formatUsd(quote.summary.appliedUsd, locale)}</span>
+              <span className="data-value">-{formatUsd(feedback?.coveredUsd ?? quote.summary.appliedUsd, locale)}</span>
             </div>
             <div className="data-row">
               <span className="data-label">{copy.payableAmount}</span>
-              <span className="data-value data-value--strong">{formatUsd(quote.summary.remainingUsd, locale)}</span>
+              <span className="data-value data-value--strong">{formatUsd(feedback?.payableUsd ?? quote.summary.remainingUsd, locale)}</span>
             </div>
           </div>
 
@@ -284,6 +394,48 @@ export function StorefrontCheckoutClient({
             </button>
             {!quote.summary.canRedeem ? <p className="trace-note">{copy.reserveDisabled}</p> : null}
           </form>
+
+          <div className="storefront-reservation-actions">
+            <form action="/api/storefront-reservation-action" method="post" className="stack stack--sm storefront-reserve-form">
+              <input type="hidden" name="locale" value={locale} />
+              <input type="hidden" name="action" value="confirm" />
+              <input type="hidden" name="items" value={JSON.stringify(items)} />
+              <input type="hidden" name="availablePoints" value={String(availablePoints)} />
+              <input type="hidden" name="requestedPoints" value={String(feedback?.requestedPoints ?? safeRequestedPoints)} />
+              <input type="hidden" name="reserveStatus" value={feedback?.status ?? ''} />
+              <input type="hidden" name="reservedPoints" value={String(feedback?.reservedPoints ?? quote.summary.appliedPoints)} />
+              <input type="hidden" name="coveredUsd" value={String(feedback?.coveredUsd ?? quote.summary.appliedUsd)} />
+              <input type="hidden" name="payableUsd" value={String(feedback?.payableUsd ?? quote.summary.remainingUsd)} />
+              <input type="hidden" name="reservationId" value={feedback?.reservationId ?? ''} />
+              <input type="hidden" name="message" value={feedback?.message ?? ''} />
+              <input type="hidden" name="source" value={feedback?.source ?? ''} />
+              <input type="hidden" name="integrationError" value={feedback?.integrationError ?? ''} />
+              <button type="submit" className="button button--secondary button--full" disabled={!activeReservation}>
+                {copy.confirmButton}
+              </button>
+            </form>
+
+            <form action="/api/storefront-reservation-action" method="post" className="stack stack--sm storefront-reserve-form">
+              <input type="hidden" name="locale" value={locale} />
+              <input type="hidden" name="action" value="cancel" />
+              <input type="hidden" name="items" value={JSON.stringify(items)} />
+              <input type="hidden" name="availablePoints" value={String(availablePoints)} />
+              <input type="hidden" name="requestedPoints" value={String(feedback?.requestedPoints ?? safeRequestedPoints)} />
+              <input type="hidden" name="reserveStatus" value={feedback?.status ?? ''} />
+              <input type="hidden" name="reservedPoints" value={String(feedback?.reservedPoints ?? quote.summary.appliedPoints)} />
+              <input type="hidden" name="coveredUsd" value={String(feedback?.coveredUsd ?? quote.summary.appliedUsd)} />
+              <input type="hidden" name="payableUsd" value={String(feedback?.payableUsd ?? quote.summary.remainingUsd)} />
+              <input type="hidden" name="reservationId" value={feedback?.reservationId ?? ''} />
+              <input type="hidden" name="message" value={feedback?.message ?? ''} />
+              <input type="hidden" name="source" value={feedback?.source ?? ''} />
+              <input type="hidden" name="integrationError" value={feedback?.integrationError ?? ''} />
+              <button type="submit" className="button button--ghost button--full" disabled={!activeReservation}>
+                {copy.cancelButton}
+              </button>
+            </form>
+          </div>
+
+          {!activeReservation ? <p className="trace-note">{copy.noReservationActions}</p> : null}
 
           <div className="hero-actions">
             <Link href={`/${locale}/shop/cart`} className="button button--secondary">

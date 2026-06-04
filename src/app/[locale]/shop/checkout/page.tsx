@@ -41,7 +41,7 @@ export default async function StoreCheckoutPage({ params, searchParams }: Checko
   ]);
 
   const feedback = {
-    status: asString(resolvedSearchParams.reserveStatus) as 'reserved' | 'simulated' | 'rejected' | undefined,
+    status: asString(resolvedSearchParams.reserveStatus) as 'reserved' | 'simulated' | 'rejected' | 'confirmed' | 'cancelled' | undefined,
     reservedPoints: asNumber(resolvedSearchParams.reservedPoints),
     coveredUsd: asNumber(resolvedSearchParams.coveredUsd),
     payableUsd: asNumber(resolvedSearchParams.payableUsd),
@@ -50,6 +50,10 @@ export default async function StoreCheckoutPage({ params, searchParams }: Checko
     message: asString(resolvedSearchParams.message),
     source: asString(resolvedSearchParams.source),
     integrationError: asString(resolvedSearchParams.integrationError),
+    actionStatus: asString(resolvedSearchParams.actionStatus) as 'confirmed' | 'cancelled' | 'rejected' | undefined,
+    actionType: asString(resolvedSearchParams.actionType) as 'confirm' | 'cancel' | undefined,
+    actionMessage: asString(resolvedSearchParams.actionMessage),
+    releasedPoints: asNumber(resolvedSearchParams.releasedPoints),
   };
 
   return (

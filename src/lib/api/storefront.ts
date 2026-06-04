@@ -12,6 +12,10 @@ import {
 } from '@/lib/storefront/quote';
 import {
   buildStorefrontFallbackReservation,
+  buildStorefrontFallbackReservationAction,
+  hasActiveStorefrontReservation,
+  type StorefrontReservationAction,
+  type StorefrontReservationActionResponse,
   type StorefrontReserveResponse,
 } from '@/lib/storefront/reserve';
 
@@ -21,6 +25,8 @@ const configuredCatalogPath = process.env.BFF_STOREFRONT_CATALOG_PATH;
 const configuredProductPath = process.env.BFF_STOREFRONT_PRODUCT_PATH;
 const configuredQuotePath = process.env.BFF_STOREFRONT_QUOTE_PATH;
 const configuredReservePath = process.env.BFF_STOREFRONT_RESERVE_PATH;
+const configuredConfirmPath = process.env.BFF_STOREFRONT_CONFIRM_PATH;
+const configuredCancelPath = process.env.BFF_STOREFRONT_CANCEL_PATH;
 
 const defaultCatalogPaths = configuredCatalogPath
   ? [configuredCatalogPath]
@@ -38,6 +44,14 @@ const defaultReservePaths = configuredReservePath
   ? [configuredReservePath]
   : ['/api/v1/storefront/reserve', '/v1/storefront/reserve', '/api/v1/redemptions/reserve', '/v1/redemptions/reserve', '/api/v1/storefront/cart/reserve', '/v1/storefront/cart/reserve'];
 
+const defaultConfirmPaths = configuredConfirmPath
+  ? [configuredConfirmPath]
+  : ['/api/v1/storefront/confirm', '/v1/storefront/confirm', '/api/v1/redemptions/confirm', '/v1/redemptions/confirm', '/api/v1/storefront/cart/confirm', '/v1/storefront/cart/confirm'];
+
+const defaultCancelPaths = configuredCancelPath
+  ? [configuredCancelPath]
+  : ['/api/v1/storefront/cancel', '/v1/storefront/cancel', '/api/v1/redemptions/cancel', '/v1/redemptions/cancel', '/api/v1/storefront/cart/cancel', '/v1/storefront/cart/cancel'];
+
 interface StorefrontCatalogFetchResult {
   payload: StorefrontCatalogResponse;
   path?: string;
@@ -45,18 +59,21 @@ interface StorefrontCatalogFetchResult {
 
 interface RawStorefrontReservationResponse {
   source?: string;
+  action?: unknown;
   status?: unknown;
   reservationId?: unknown;
   requestedPoints?: unknown;
   reservedPoints?: unknown;
   coveredUsd?: unknown;
   payableUsd?: unknown;
+  releasedPoints?: unknown;
   quote?: unknown;
   summary?: {
     requestedPoints?: unknown;
     reservedPoints?: unknown;
     coveredUsd?: unknown;
     payableUsd?: unknown;
+    releasedPoints?: unknown;
   };
   message?: unknown;
   integrations?: {
@@ -447,6 +464,20 @@ export async function getStorefrontProductById(locale: Locale, productId: string
   return catalog.items.find((item) => item.id === productId || item.sku === productId) ?? null;
 }
 
+function buildReservationPayload(quote: StorefrontQuoteResponse) {
+  return {
+    currency: 'USD',
+    lines: quote.lines.map((line) => ({
+      productId: line.productId,
+      quantity: line.quantity,
+    })),
+    requestedPoints: quote.summary.requestedPoints,
+    appliedPoints: quote.summary.appliedPoints,
+    availablePoints: quote.summary.availablePoints,
+    subtotalUsd: quote.summary.subtotalUsd,
+  };
+}
+
 async function tryFetchReserve(
   path: string,
   locale: Locale,
@@ -461,15 +492,7 @@ async function tryFetchReserve(
     },
     body: JSON.stringify({
       locale,
-      currency: 'USD',
-      lines: quote.lines.map((line) => ({
-        productId: line.productId,
-        quantity: line.quantity,
-      })),
-      requestedPoints: quote.summary.requestedPoints,
-      appliedPoints: quote.summary.appliedPoints,
-      availablePoints: quote.summary.availablePoints,
-      subtotalUsd: quote.summary.subtotalUsd,
+      ...buildReservationPayload(quote),
     }),
   });
 
@@ -505,6 +528,77 @@ async function tryFetchReserve(
     coveredUsd,
     payableUsd,
     quote,
+    message,
+    integrations: {
+      storefront: {
+        available: data.integrations?.storefront?.available ?? true,
+        baseUrl: data.integrations?.storefront?.baseUrl ?? storefrontBaseUrl,
+        checkedAt: data.integrations?.storefront?.checkedAt ?? new Date().toISOString(),
+        path: data.integrations?.storefront?.path ?? path,
+        error: data.integrations?.storefront?.error,
+      },
+    },
+  };
+}
+
+async function tryFetchReservationAction(
+  action: StorefrontReservationAction,
+  path: string,
+  locale: Locale,
+  reservation: StorefrontReserveResponse,
+): Promise<StorefrontReservationActionResponse | null> {
+  const response = await fetch(`${storefrontBaseUrl}${path}`, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: {
+      'content-type': 'application/json',
+      'accept-language': locale,
+    },
+    body: JSON.stringify({
+      locale,
+      reservationId: reservation.reservationId,
+      ...buildReservationPayload(reservation.quote),
+      reservedPoints: reservation.reservedPoints,
+      coveredUsd: reservation.coveredUsd,
+      payableUsd: reservation.payableUsd,
+    }),
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const data = (await response.json()) as RawStorefrontReservationResponse;
+  const status = asString(data.status);
+  const requestedPoints = asNumber(data.requestedPoints) ?? asNumber(data.summary?.requestedPoints);
+  const reservedPoints = asNumber(data.reservedPoints) ?? asNumber(data.summary?.reservedPoints);
+  const coveredUsd = asNumber(data.coveredUsd) ?? asNumber(data.summary?.coveredUsd);
+  const payableUsd = asNumber(data.payableUsd) ?? asNumber(data.summary?.payableUsd);
+  const releasedPoints = asNumber(data.releasedPoints) ?? asNumber(data.summary?.releasedPoints);
+  const message = asString(data.message);
+
+  if (
+    (status !== 'confirmed' && status !== 'cancelled' && status !== 'rejected') ||
+    requestedPoints === undefined ||
+    reservedPoints === undefined ||
+    coveredUsd === undefined ||
+    payableUsd === undefined ||
+    !message
+  ) {
+    return null;
+  }
+
+  return {
+    source: asString(data.source) ?? `storefront-bff-${action}`,
+    action,
+    status,
+    reservationId: asString(data.reservationId) ?? reservation.reservationId,
+    requestedPoints,
+    reservedPoints,
+    coveredUsd,
+    payableUsd,
+    releasedPoints,
+    quote: reservation.quote,
     message,
     integrations: {
       storefront: {
@@ -577,6 +671,54 @@ export async function reserveStorefrontQuote(
       baseUrl: storefrontBaseUrl,
       checkedAt: new Date().toISOString(),
       path: configuredReservePath ?? defaultReservePaths.join(', '),
+      error: lastError,
+    },
+  });
+}
+
+export async function applyStorefrontReservationAction(
+  locale: Locale,
+  action: StorefrontReservationAction,
+  reservation: StorefrontReserveResponse,
+): Promise<StorefrontReservationActionResponse> {
+  if (!hasActiveStorefrontReservation(reservation)) {
+    return buildStorefrontFallbackReservationAction(action, reservation, {
+      source: `mock-storefront-${action}`,
+      integration: {
+        available: false,
+        baseUrl: storefrontBaseUrl,
+        checkedAt: new Date().toISOString(),
+        path: action === 'confirm'
+          ? configuredConfirmPath ?? defaultConfirmPaths.join(', ')
+          : configuredCancelPath ?? defaultCancelPaths.join(', '),
+        error: 'Reservation is not active anymore.',
+      },
+    });
+  }
+
+  const actionPaths = action === 'confirm' ? defaultConfirmPaths : defaultCancelPaths;
+  const configuredActionPath = action === 'confirm' ? configuredConfirmPath : configuredCancelPath;
+  let lastError: string | undefined;
+
+  for (const path of actionPaths) {
+    try {
+      const response = await tryFetchReservationAction(action, path, locale, reservation);
+      if (response) {
+        return response;
+      }
+      lastError = `No compatible storefront ${action} payload found at ${path}`;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : `Storefront ${action} request failed at ${path}`;
+    }
+  }
+
+  return buildStorefrontFallbackReservationAction(action, reservation, {
+    source: `mock-storefront-${action}`,
+    integration: {
+      available: false,
+      baseUrl: storefrontBaseUrl,
+      checkedAt: new Date().toISOString(),
+      path: configuredActionPath ?? actionPaths.join(', '),
       error: lastError,
     },
   });

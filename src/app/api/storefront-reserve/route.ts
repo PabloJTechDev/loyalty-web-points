@@ -2,19 +2,10 @@ import { NextResponse } from 'next/server';
 import { defaultLocale, isLocale } from '@/lib/i18n/config';
 import { getStorefrontQuote, reserveStorefrontQuote } from '@/lib/api/storefront';
 
-export async function POST(request: Request) {
-  const formData = await request.formData();
-  const rawLocale = String(formData.get('locale') ?? defaultLocale);
-  const locale = isLocale(rawLocale) ? rawLocale : defaultLocale;
-  const rawItems = String(formData.get('items') ?? '[]');
-  const availablePoints = Number(formData.get('availablePoints') ?? 0);
-  const requestedPoints = Number(formData.get('requestedPoints') ?? 0);
-
-  let items: Array<{ productId: string; quantity: number }> = [];
-
+function parseItems(rawItems: string) {
   try {
     const parsed = JSON.parse(rawItems) as Array<{ productId?: string; quantity?: number }>;
-    items = Array.isArray(parsed)
+    return Array.isArray(parsed)
       ? parsed
           .map((item) => ({
             productId: String(item?.productId ?? '').trim(),
@@ -23,9 +14,19 @@ export async function POST(request: Request) {
           .filter((item) => item.productId.length > 0 && Number.isFinite(item.quantity) && item.quantity > 0)
       : [];
   } catch {
-    items = [];
+    return [];
   }
+}
 
+export async function POST(request: Request) {
+  const formData = await request.formData();
+  const rawLocale = String(formData.get('locale') ?? defaultLocale);
+  const locale = isLocale(rawLocale) ? rawLocale : defaultLocale;
+  const rawItems = String(formData.get('items') ?? '[]');
+  const availablePoints = Number(formData.get('availablePoints') ?? 0);
+  const requestedPoints = Number(formData.get('requestedPoints') ?? 0);
+
+  const items = parseItems(rawItems);
   const quote = await getStorefrontQuote(locale, items, {
     availablePoints: Number.isFinite(availablePoints) ? availablePoints : 0,
     requestedPoints: Number.isFinite(requestedPoints) ? requestedPoints : 0,
@@ -41,6 +42,10 @@ export async function POST(request: Request) {
   redirectUrl.searchParams.set('requestedPoints', String(reservation.requestedPoints));
   redirectUrl.searchParams.set('message', reservation.message);
   redirectUrl.searchParams.set('source', reservation.source);
+  redirectUrl.searchParams.delete('actionStatus');
+  redirectUrl.searchParams.delete('actionType');
+  redirectUrl.searchParams.delete('actionMessage');
+  redirectUrl.searchParams.delete('releasedPoints');
 
   if (reservation.reservationId) {
     redirectUrl.searchParams.set('reservationId', reservation.reservationId);

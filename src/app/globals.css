@@ -792,6 +792,18 @@ p {
   margin-top: 18px;
 }
 
+.storefront-reservation-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.storefront-reservation-state .info-chip--success {
+  background: rgba(16, 100, 48, 0.12);
+  color: var(--foreground-strong);
+}
+
 .store-pdp-hero {
   display: flex;
   justify-content: space-between;
@@ -894,7 +906,8 @@ p {
 
   .bullet-list--cards,
   .store-card-actions,
-  .storefront-actions {
+  .storefront-actions,
+  .storefront-reservation-actions {
     grid-template-columns: 1fr;
   }
 
