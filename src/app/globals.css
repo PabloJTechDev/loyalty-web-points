@@ -625,6 +625,12 @@ p {
   border: 1px solid rgba(20, 115, 70, 0.18);
 }
 
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+  transform: none;
+}
+
 .button--ghost-arrow {
   color: var(--primary-strong);
   background: transparent;
@@ -776,6 +782,16 @@ p {
   align-items: start;
 }
 
+.storefront-actions {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.storefront-reserve-form {
+  margin-top: 18px;
+}
+
 .store-pdp-hero {
   display: flex;
   justify-content: space-between;
@@ -846,6 +862,11 @@ p {
   gap: 10px;
 }
 
+.cart-line__controls--summary {
+  justify-content: flex-end;
+  min-width: 120px;
+}
+
 .social-proof-bar,
 .hero-panel,
 .hero-illustration-card,
@@ -872,7 +893,8 @@ p {
   }
 
   .bullet-list--cards,
-  .store-card-actions {
+  .store-card-actions,
+  .storefront-actions {
     grid-template-columns: 1fr;
   }
 

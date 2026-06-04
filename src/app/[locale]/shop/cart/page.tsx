@@ -40,6 +40,24 @@ export default async function StoreCartPage({
       <StorefrontCartClient locale={locale} products={catalog.items} availablePoints={wallet.summary.availablePoints} />
 
       <section className="section-block">
+        <CustomerCard>
+          <div className="stack stack--sm">
+            <SectionTitle>{locale === 'es' ? 'Continuar a checkout' : 'Continue to checkout'}</SectionTitle>
+            <p className="muted">
+              {locale === 'es'
+                ? 'Cuando el carrito ya tenga los productos correctos, avanza al resumen de checkout para reservar puntos contra el quote actual.'
+                : 'Once the cart has the right products, move to the checkout summary to reserve points against the current quote.'}
+            </p>
+            <div className="link-list">
+              <Link href={`/${locale}/shop/checkout`}>
+                {locale === 'es' ? 'Abrir checkout summary' : 'Open checkout summary'}
+              </Link>
+            </div>
+          </div>
+        </CustomerCard>
+      </section>
+
+      <section className="section-block">
         <CustomerCard tone="soft">
           <div className="stack stack--sm">
             <SectionTitle>{locale === 'es' ? 'Qué queda intacto' : 'What stays intact'}</SectionTitle>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 
 export interface DemoCartItem {
   productId: string;
@@ -46,27 +46,35 @@ function persistCartState(state: DemoCartState) {
   window.dispatchEvent(new Event(CART_EVENT));
 }
 
+function subscribeToCart(onStoreChange: () => void) {
+  if (typeof window === 'undefined') {
+    return () => undefined;
+  }
+
+  window.addEventListener(CART_EVENT, onStoreChange);
+  window.addEventListener('storage', onStoreChange);
+
+  return () => {
+    window.removeEventListener(CART_EVENT, onStoreChange);
+    window.removeEventListener('storage', onStoreChange);
+  };
+}
+
 export function useDemoCart() {
-  const [state, setState] = useState<DemoCartState>({ items: [] });
-  const [isHydrated, setIsHydrated] = useState(false);
+  const state = useSyncExternalStore(
+    subscribeToCart,
+    readCartState,
+    () => ({ items: [] }),
+  );
 
-  useEffect(() => {
-    const sync = () => setState(readCartState());
-    sync();
-    setIsHydrated(true);
-
-    window.addEventListener(CART_EVENT, sync);
-    window.addEventListener('storage', sync);
-
-    return () => {
-      window.removeEventListener(CART_EVENT, sync);
-      window.removeEventListener('storage', sync);
-    };
-  }, []);
+  const isHydrated = useSyncExternalStore(
+    subscribeToCart,
+    () => true,
+    () => false,
+  );
 
   const replaceItems = useCallback((items: DemoCartItem[]) => {
     const nextState = { items: sanitizeItems(items) };
-    setState(nextState);
     persistCartState(nextState);
   }, []);
 

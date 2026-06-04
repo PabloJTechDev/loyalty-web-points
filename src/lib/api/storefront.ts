@@ -10,12 +10,17 @@ import {
   type StorefrontQuoteLineInput,
   type StorefrontQuoteResponse,
 } from '@/lib/storefront/quote';
+import {
+  buildStorefrontFallbackReservation,
+  type StorefrontReserveResponse,
+} from '@/lib/storefront/reserve';
 
 const customerBaseUrl = process.env.BFF_CUSTOMER_BASE_URL ?? 'http://localhost:3002';
 const storefrontBaseUrl = process.env.BFF_STOREFRONT_BASE_URL ?? customerBaseUrl;
 const configuredCatalogPath = process.env.BFF_STOREFRONT_CATALOG_PATH;
 const configuredProductPath = process.env.BFF_STOREFRONT_PRODUCT_PATH;
 const configuredQuotePath = process.env.BFF_STOREFRONT_QUOTE_PATH;
+const configuredReservePath = process.env.BFF_STOREFRONT_RESERVE_PATH;
 
 const defaultCatalogPaths = configuredCatalogPath
   ? [configuredCatalogPath]
@@ -27,11 +32,42 @@ const defaultProductPaths = configuredProductPath
 
 const defaultQuotePaths = configuredQuotePath
   ? [configuredQuotePath]
-  : ['/api/v1/storefront/quote', '/v1/storefront/quote', '/api/v1/redemptions/quote', '/v1/redemptions/quote'];
+  : ['/api/v1/storefront/quote', '/v1/storefront/quote', '/api/v1/redemptions/quote', '/v1/redemptions/quote', '/api/v1/storefront/cart/quote', '/v1/storefront/cart/quote'];
+
+const defaultReservePaths = configuredReservePath
+  ? [configuredReservePath]
+  : ['/api/v1/storefront/reserve', '/v1/storefront/reserve', '/api/v1/redemptions/reserve', '/v1/redemptions/reserve', '/api/v1/storefront/cart/reserve', '/v1/storefront/cart/reserve'];
 
 interface StorefrontCatalogFetchResult {
   payload: StorefrontCatalogResponse;
   path?: string;
+}
+
+interface RawStorefrontReservationResponse {
+  source?: string;
+  status?: unknown;
+  reservationId?: unknown;
+  requestedPoints?: unknown;
+  reservedPoints?: unknown;
+  coveredUsd?: unknown;
+  payableUsd?: unknown;
+  quote?: unknown;
+  summary?: {
+    requestedPoints?: unknown;
+    reservedPoints?: unknown;
+    coveredUsd?: unknown;
+    payableUsd?: unknown;
+  };
+  message?: unknown;
+  integrations?: {
+    storefront?: {
+      available?: boolean;
+      baseUrl?: string;
+      checkedAt?: string;
+      path?: string;
+      error?: string;
+    };
+  };
 }
 
 interface RawStorefrontCatalogResponse {
@@ -411,6 +447,77 @@ export async function getStorefrontProductById(locale: Locale, productId: string
   return catalog.items.find((item) => item.id === productId || item.sku === productId) ?? null;
 }
 
+async function tryFetchReserve(
+  path: string,
+  locale: Locale,
+  quote: StorefrontQuoteResponse,
+): Promise<StorefrontReserveResponse | null> {
+  const response = await fetch(`${storefrontBaseUrl}${path}`, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: {
+      'content-type': 'application/json',
+      'accept-language': locale,
+    },
+    body: JSON.stringify({
+      locale,
+      currency: 'USD',
+      lines: quote.lines.map((line) => ({
+        productId: line.productId,
+        quantity: line.quantity,
+      })),
+      requestedPoints: quote.summary.requestedPoints,
+      appliedPoints: quote.summary.appliedPoints,
+      availablePoints: quote.summary.availablePoints,
+      subtotalUsd: quote.summary.subtotalUsd,
+    }),
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const data = (await response.json()) as RawStorefrontReservationResponse;
+  const status = asString(data.status);
+  const requestedPoints = asNumber(data.requestedPoints) ?? asNumber(data.summary?.requestedPoints);
+  const reservedPoints = asNumber(data.reservedPoints) ?? asNumber(data.summary?.reservedPoints);
+  const coveredUsd = asNumber(data.coveredUsd) ?? asNumber(data.summary?.coveredUsd);
+  const payableUsd = asNumber(data.payableUsd) ?? asNumber(data.summary?.payableUsd);
+  const message = asString(data.message);
+
+  if (
+    (status !== 'reserved' && status !== 'simulated' && status !== 'rejected') ||
+    requestedPoints === undefined ||
+    reservedPoints === undefined ||
+    coveredUsd === undefined ||
+    payableUsd === undefined ||
+    !message
+  ) {
+    return null;
+  }
+
+  return {
+    source: asString(data.source) ?? 'storefront-bff-reserve',
+    status,
+    reservationId: asString(data.reservationId),
+    requestedPoints,
+    reservedPoints,
+    coveredUsd,
+    payableUsd,
+    quote,
+    message,
+    integrations: {
+      storefront: {
+        available: data.integrations?.storefront?.available ?? true,
+        baseUrl: data.integrations?.storefront?.baseUrl ?? storefrontBaseUrl,
+        checkedAt: data.integrations?.storefront?.checkedAt ?? new Date().toISOString(),
+        path: data.integrations?.storefront?.path ?? path,
+        error: data.integrations?.storefront?.error,
+      },
+    },
+  };
+}
+
 export async function getStorefrontQuote(
   locale: Locale,
   lines: StorefrontQuoteLineInput[],
@@ -441,6 +548,36 @@ export async function getStorefrontQuote(
       checkedAt: new Date().toISOString(),
       path: configuredQuotePath ?? defaultQuotePaths.join(', '),
       error: lastError ?? catalog.integrations.storefront.error,
+    },
+  });
+}
+
+export async function reserveStorefrontQuote(
+  locale: Locale,
+  quote: StorefrontQuoteResponse,
+): Promise<StorefrontReserveResponse> {
+  let lastError: string | undefined;
+
+  for (const path of defaultReservePaths) {
+    try {
+      const reservation = await tryFetchReserve(path, locale, quote);
+      if (reservation) {
+        return reservation;
+      }
+      lastError = `No compatible storefront reserve payload found at ${path}`;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : `Storefront reserve request failed at ${path}`;
+    }
+  }
+
+  return buildStorefrontFallbackReservation(quote, {
+    source: 'mock-storefront-reserve',
+    integration: {
+      available: false,
+      baseUrl: storefrontBaseUrl,
+      checkedAt: new Date().toISOString(),
+      path: configuredReservePath ?? defaultReservePaths.join(', '),
+      error: lastError,
     },
   });
 }

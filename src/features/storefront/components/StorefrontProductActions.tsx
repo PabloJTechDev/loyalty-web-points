@@ -24,7 +24,7 @@ export function StorefrontProductActions({ locale, productId }: StorefrontProduc
           onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
         />
       </label>
-      <div className="hero-actions">
+      <div className="hero-actions storefront-actions">
         <StorefrontAddToCartButton
           productId={productId}
           quantity={quantity}
@@ -34,6 +34,9 @@ export function StorefrontProductActions({ locale, productId }: StorefrontProduc
         />
         <Link href={`/${locale}/shop/cart`} className="button button--secondary button--full">
           {locale === 'es' ? 'Abrir carrito' : 'Open cart'}
+        </Link>
+        <Link href={`/${locale}/shop/checkout`} className="button button--ghost button--full">
+          {locale === 'es' ? 'Ir a checkout' : 'Go to checkout'}
         </Link>
       </div>
     </div>

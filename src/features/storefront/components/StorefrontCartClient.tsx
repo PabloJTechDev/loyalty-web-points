@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Locale } from '@/lib/i18n/config';
 import type { StorefrontCatalogItem } from '@/lib/mocks/storefront-catalog';
 import { useDemoCart } from '@/features/storefront/hooks/useDemoCart';
@@ -29,21 +29,27 @@ export function StorefrontCartClient({ locale, products, availablePoints }: Stor
   const { items, setQuantity, removeItem, clear, isHydrated } = useDemoCart();
   const [requestedPoints, setRequestedPoints] = useState(0);
 
+  const safeRequestedPoints = useMemo(() => {
+    const normalized = Math.max(0, Math.floor(requestedPoints));
+
+    if (!items.length) return 0;
+
+    const unrestrictedQuote = buildStorefrontFallbackQuote(products, items, {
+      availablePoints,
+      requestedPoints: 0,
+    });
+
+    if (!unrestrictedQuote.summary.canRedeem) {
+      return 0;
+    }
+
+    return Math.min(normalized, unrestrictedQuote.summary.maxRedeemablePoints);
+  }, [availablePoints, items, products, requestedPoints]);
+
   const quote = useMemo(
-    () => buildStorefrontFallbackQuote(products, items, { availablePoints, requestedPoints }),
-    [availablePoints, items, products, requestedPoints],
+    () => buildStorefrontFallbackQuote(products, items, { availablePoints, requestedPoints: safeRequestedPoints }),
+    [availablePoints, items, products, safeRequestedPoints],
   );
-
-  useEffect(() => {
-    if (!quote.summary.canRedeem && requestedPoints !== 0) {
-      setRequestedPoints(0);
-      return;
-    }
-
-    if (quote.summary.canRedeem && requestedPoints > quote.summary.maxRedeemablePoints) {
-      setRequestedPoints(quote.summary.maxRedeemablePoints);
-    }
-  }, [quote.summary.canRedeem, quote.summary.maxRedeemablePoints, requestedPoints]);
 
   const itemView = useMemo(() => {
     const productMap = new Map(products.map((product) => [product.id, product]));
@@ -181,7 +187,7 @@ export function StorefrontCartClient({ locale, products, availablePoints }: Stor
                   type="number"
                   min={0}
                   step={100}
-                  value={requestedPoints}
+                  value={safeRequestedPoints}
                   onChange={(event) => setRequestedPoints(Math.max(0, Number(event.target.value) || 0))}
                 />
               </div>
