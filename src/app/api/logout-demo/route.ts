@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { DEMO_SESSION_COOKIE } from '@/lib/auth/session';
+import { observeRequest } from '@/lib/metrics';
 import { defaultLocale, isLocale } from '@/lib/i18n/config';
 
 export async function POST(request: Request) {
+  const startedAt = performance.now();
+  const route = '/api/logout-demo';
   const formData = await request.formData();
   const rawLocale = String(formData.get('locale') ?? defaultLocale);
   const locale = isLocale(rawLocale) ? rawLocale : defaultLocale;
@@ -19,5 +22,6 @@ export async function POST(request: Request) {
     maxAge: 0,
   });
 
+  observeRequest({ method: 'POST', route, statusCode: response.status, durationSeconds: (performance.now() - startedAt) / 1000 });
   return response;
 }

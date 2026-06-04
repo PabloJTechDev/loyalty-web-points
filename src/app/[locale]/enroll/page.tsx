@@ -60,6 +60,30 @@ export default async function EnrollPage({
 
               <p className="field-help">{dictionary.enroll.emailHelp}</p>
 
+              <label className="field-group">
+                <span className="field-label">{locale === 'es' ? 'Clave de acceso' : 'Access password'}</span>
+                <input
+                  type="password"
+                  name="password"
+                  minLength={8}
+                  className="field-input"
+                  placeholder={locale === 'es' ? 'Mínimo 8 caracteres' : 'At least 8 characters'}
+                  required
+                />
+              </label>
+
+              <label className="field-group">
+                <span className="field-label">{locale === 'es' ? 'Confirma la clave' : 'Confirm password'}</span>
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  minLength={8}
+                  className="field-input"
+                  placeholder={locale === 'es' ? 'Repite la clave' : 'Repeat password'}
+                  required
+                />
+              </label>
+
               <button type="submit" className="button button--primary">
                 {dictionary.enroll.submit}
               </button>

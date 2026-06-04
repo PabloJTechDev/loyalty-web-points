@@ -11,7 +11,7 @@ export default async function EnrollSuccessPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ transactionId?: string; emailHash?: string }>;
+  searchParams?: Promise<{ transactionId?: string; emailHash?: string; requestId?: string; loginId?: string }>;
 }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
@@ -19,6 +19,8 @@ export default async function EnrollSuccessPage({
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const transactionId = resolvedSearchParams?.transactionId;
   const emailHash = resolvedSearchParams?.emailHash;
+  const requestId = resolvedSearchParams?.requestId;
+  const loginId = resolvedSearchParams?.loginId;
 
   if (!transactionId) notFound();
 
@@ -52,13 +54,26 @@ export default async function EnrollSuccessPage({
                 <span>{dictionary.enrollSuccess.transactionId}</span>
                 <strong>{transactionId}</strong>
               </div>
+              {requestId ? (
+                <div>
+                  <span>requestId</span>
+                  <strong>{requestId}</strong>
+                </div>
+              ) : null}
               <div>
                 <span>{dictionary.enrollSuccess.emailHash}</span>
                 <strong className="trace-hash">{emailHash ?? dictionary.enrollSuccess.unavailableHash}</strong>
               </div>
             </div>
 
-            <p className="trace-note">{dictionary.enrollSuccess.hashNotice}</p>
+            <p className="trace-note">
+              {dictionary.enrollSuccess.hashNotice}
+              {loginId
+                ? ` ${locale === 'es' ? 'Además, la sesión demo ya quedó autenticada automáticamente.' : 'The demo session is already authenticated automatically.'}`
+                : requestId
+                  ? ` ${locale === 'es' ? 'Además, el requestId ya quedó generado para pasar directo al login.' : 'The requestId is already generated so you can jump straight to login.'}`
+                  : ''}
+            </p>
           </div>
         </CustomerCard>
 
@@ -78,9 +93,19 @@ export default async function EnrollSuccessPage({
             </div>
 
             <div className="hero-actions">
-              <Link href={`/${locale}/password-change?transactionId=${encodeURIComponent(transactionId)}`} className="button button--primary">
-                {dictionary.enrollSuccess.primaryCta}
-              </Link>
+              {loginId ? (
+                <Link href={`/${locale}/authenticated`} className="button button--primary">
+                  {locale === 'es' ? 'Ir al home autenticado' : 'Go to authenticated home'}
+                </Link>
+              ) : requestId ? (
+                <Link href={`/${locale}/login?requestId=${encodeURIComponent(requestId)}`} className="button button--primary">
+                  {locale === 'es' ? 'Continuar al login' : 'Continue to login'}
+                </Link>
+              ) : (
+                <Link href={`/${locale}/password-change?transactionId=${encodeURIComponent(transactionId)}`} className="button button--primary">
+                  {dictionary.enrollSuccess.primaryCta}
+                </Link>
+              )}
               <Link href={`/${locale}/traces/${encodeURIComponent(transactionId)}`} className="button button--secondary">
                 {dictionary.enrollSuccess.secondaryCta}
               </Link>

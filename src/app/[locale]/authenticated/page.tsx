@@ -3,6 +3,7 @@ import { CustomerCard } from '@/features/customer/components/CustomerCard';
 import { CustomerPageHeader } from '@/features/customer/components/CustomerPageHeader';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { getDemoSession } from '@/lib/auth/session';
+import { getCustomerLoginTraceByLoginId } from '@/lib/api/customer';
 import { formatDate } from '@/lib/i18n/format';
 
 export default async function AuthenticatedHomePage({
@@ -19,6 +20,8 @@ export default async function AuthenticatedHomePage({
   if (!session) {
     return null;
   }
+
+  const loginTrace = await getCustomerLoginTraceByLoginId(session.loginId);
 
   return (
     <>
@@ -59,6 +62,28 @@ export default async function AuthenticatedHomePage({
                 <span className="data-label">Tier</span>
                 <span className="data-value">{session.tier}</span>
               </div>
+              {loginTrace?.trace ? (
+                <>
+                  <div className="data-row">
+                    <span className="data-label">requestId</span>
+                    <span className="data-value">{loginTrace.trace.requestId}</span>
+                  </div>
+                  <div className="data-row">
+                    <span className="data-label">transactionId</span>
+                    <span className="data-value">{loginTrace.trace.transactionId}</span>
+                  </div>
+                  <div className="data-row">
+                    <span className="data-label">auth status</span>
+                    <span className="data-value">{loginTrace.trace.session.status}</span>
+                  </div>
+                  {loginTrace.trace.session.authenticatedAt ? (
+                    <div className="data-row">
+                      <span className="data-label">authenticatedAt</span>
+                      <span className="data-value">{formatDate(loginTrace.trace.session.authenticatedAt, locale as 'es' | 'en')}</span>
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
             </div>
           </div>
         </CustomerCard>
@@ -79,10 +104,42 @@ export default async function AuthenticatedHomePage({
               <Link href={`/${locale}/wallet`} className="button button--secondary">
                 {locale === 'es' ? 'Abrir wallet' : 'Open wallet'}
               </Link>
+              <Link href={`/${locale}/login/traces/${session.loginId}`} className="button button--ghost">
+                {locale === 'es' ? 'Ver trace login' : 'View login trace'}
+              </Link>
             </div>
           </div>
         </CustomerCard>
       </section>
+
+      {loginTrace?.coreRecord ? (
+        <section className="section-block">
+          <CustomerCard>
+            <div className="stack stack--sm">
+              <span className="section-kicker">{locale === 'es' ? 'Core evidence' : 'Core evidence'}</span>
+              <h3 className="section-title">{locale === 'es' ? 'Autenticación confirmada por el core' : 'Authentication confirmed by core'}</h3>
+              <div className="data-list">
+                <div className="data-row">
+                  <span className="data-label">loginId</span>
+                  <span className="data-value">{loginTrace.coreRecord.loginId}</span>
+                </div>
+                <div className="data-row">
+                  <span className="data-label">requestId</span>
+                  <span className="data-value">{loginTrace.coreRecord.requestId}</span>
+                </div>
+                <div className="data-row">
+                  <span className="data-label">stage</span>
+                  <span className="data-value">{loginTrace.coreRecord.stage}</span>
+                </div>
+                <div className="data-row">
+                  <span className="data-label">source</span>
+                  <span className="data-value">{loginTrace.coreRecord.source}</span>
+                </div>
+              </div>
+            </div>
+          </CustomerCard>
+        </section>
+      ) : null}
     </>
   );
 }

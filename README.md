@@ -4,6 +4,16 @@ Customer-facing frontend for the **customer-first** loyalty journey.
 
 This app is the presentation layer of the case study. It consumes the BFF server-side, exposes the end-user flow, and keeps the UI coherent across enrollment, password change, login, and authenticated navigation.
 
+Part of the ecosystem:
+
+- `loyalty-web` → customer-facing frontend in **Next.js**
+- `loyalty-bff-customer` → experience-oriented BFF in **NestJS**
+- `loyalty-core-customer` → technical core service in **Go + Postgres**
+
+```text
+Next.js web → NestJS BFF → Go core service + Postgres traces
+```
+
 ---
 
 ## What this app is responsible for
@@ -96,6 +106,15 @@ This keeps the UI organized around domain experience instead of generic folders 
 
 ---
 
+## Related repositories
+
+- `loyalty-bff-customer` → backend-for-frontend that powers this UI
+- `loyalty-core-customer` → technical traceability service used by the BFF
+
+This repo should be readable on its own, but it is stronger when reviewed together with the BFF and core repos as one portfolio slice.
+
+---
+
 ## Environment
 
 Create a local env file from the example:
@@ -152,10 +171,10 @@ Current test coverage includes:
 
 ## Related assets
 
-- hero image: `public/hero-fintech-loyalty-people.png`
+- hero image: `public/hero-fintech-loyalty.svg`
 - future image prompt: `docs/hero-image-prompt.md`
-- journey screenshots: `../docs/portfolio/`
-- architecture docs: `../docs/architecture/`
+
+Note: cross-repo architecture docs and case-study narrative currently live outside this repo and are intentionally not duplicated here yet.
 
 ---
 

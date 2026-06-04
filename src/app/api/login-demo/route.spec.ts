@@ -15,8 +15,13 @@ function buildRequest(fields: Record<string, string>) {
 }
 
 describe('POST /api/login-demo', () => {
+  beforeEach(() => {
+    vi.stubEnv('AUTH_DEMO_COOKIE_SECRET', 'test-secret');
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
 

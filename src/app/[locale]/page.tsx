@@ -2,34 +2,37 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getDemoSession } from '@/lib/auth/session';
-import { getCustomerEnrollmentTraces, getCustomerHome } from '@/lib/api/customer';
+import { getCustomerHome } from '@/lib/api/customer';
+import { getStorefrontCatalog } from '@/lib/api/storefront';
 import { CustomerBadge } from '@/features/customer/components/CustomerBadge';
 import { CustomerCard } from '@/features/customer/components/CustomerCard';
 import { MetricCard } from '@/features/customer/components/MetricCard';
 import { CustomerShell } from '@/features/customer/components/CustomerShell';
 import { SectionTitle } from '@/features/customer/components/SectionTitle';
-import { EmptyState } from '@/features/customer/components/state/EmptyState';
-import { EnrollmentTracePanel } from '@/features/customer/components/EnrollmentTracePanel';
 import { getDictionary } from '@/lib/i18n/dictionaries';
-import { isLocale } from '@/lib/i18n/config';
+import { isLocale, type Locale } from '@/lib/i18n/config';
 import { formatDate, formatPoints } from '@/lib/i18n/format';
+
+function formatUsd(amount: number, locale: Locale) {
+  return new Intl.NumberFormat(locale === 'es' ? 'es-CL' : 'en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
 
 export default async function HomePage({
   params,
-  searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ enrollment?: string }>;
 }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
 
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
-
-  const [data, dictionary, traces, authenticatedSession] = await Promise.all([
+  const [data, storefrontCatalog, dictionary, authenticatedSession] = await Promise.all([
     getCustomerHome(),
+    getStorefrontCatalog(locale),
     Promise.resolve(getDictionary(locale)),
-    getCustomerEnrollmentTraces(),
     getDemoSession(),
   ]);
 
@@ -57,7 +60,9 @@ export default async function HomePage({
     <CustomerShell locale={locale} dictionary={dictionary} authenticatedSession={authenticatedSession}>
       <section className="landing-hero">
         <div className="landing-hero__copy">
-          <CustomerBadge label={`${dictionary.home.badge} · ${dictionary.common.source}: ${data.source ?? 'unknown'}`} />
+          <CustomerBadge
+            label={`${dictionary.home.badge} · ${dictionary.common.source}: ${data.source ?? 'unknown'} · storefront: ${storefrontCatalog.source}`}
+          />
 
           <div className="landing-hero__text">
             <h2 className="landing-hero__title">{dictionary.home.title}</h2>
@@ -65,10 +70,10 @@ export default async function HomePage({
           </div>
 
           <div className="landing-hero__actions">
-            <Link href={`/${locale}/wallet`} className="button button--primary">
+            <Link href={`/${locale}/shop`} className="button button--primary">
               {dictionary.home.primaryCta}
             </Link>
-            <Link href={`/${locale}/profile-summary`} className="button button--ghost-arrow">
+            <Link href={`/${locale}/wallet`} className="button button--ghost-arrow">
               {dictionary.home.secondaryCta}
             </Link>
           </div>
@@ -118,25 +123,11 @@ export default async function HomePage({
             <span className="section-kicker">{dictionary.home.activityKicker}</span>
             <SectionTitle>{dictionary.home.activityTitle}</SectionTitle>
             <p className="muted">{dictionary.home.activityDescription}</p>
-            {data.recentActivity.length ? (
-              <ul className="bullet-list">
-                {data.recentActivity.map((item: { id: string; description: string; points: number }) => (
-                  <li key={item.id}>
-                    {item.description}: {item.points > 0 ? '+' : ''}
-                    {formatPoints(item.points, locale)} pts
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <EmptyState
-                title={locale === 'es' ? 'Aún no hay actividad reciente' : 'There is no recent activity yet'}
-                description={
-                  locale === 'es'
-                    ? 'Cuando existan nuevos movimientos, aparecerán aquí con contexto claro para el cliente.'
-                    : 'When new movements exist, they will appear here with clear customer context.'
-                }
-              />
-            )}
+            <ol className="numbered-list">
+              {dictionary.home.steps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
           </div>
         </CustomerCard>
 
@@ -145,27 +136,59 @@ export default async function HomePage({
             <span className="section-kicker">{dictionary.home.actionsKicker}</span>
             <SectionTitle>{dictionary.home.actionsTitle}</SectionTitle>
             <div className="link-list">
+              <Link href={`/${locale}/shop`}>{dictionary.home.quickLinks.shop}</Link>
               <Link href={`/${locale}/profile-summary`}>{dictionary.home.quickLinks.profile}</Link>
               <Link href={`/${locale}/wallet`}>{dictionary.home.quickLinks.wallet}</Link>
               {authenticatedSession ? (
                 <Link href={`/${locale}/authenticated`}>{dictionary.login.authenticatedArea}</Link>
               ) : null}
             </div>
-            <ol className="numbered-list">
-              {dictionary.home.steps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
           </div>
         </CustomerCard>
       </section>
 
-      <EnrollmentTracePanel
-        locale={locale}
-        content={dictionary.enrollment}
-        traces={traces}
-        enrollmentStatus={resolvedSearchParams?.enrollment}
-      />
+      <section className="landing-section landing-section--split">
+        <CustomerCard>
+          <div className="stack stack--sm">
+            <span className="section-kicker">{dictionary.home.categoriesKicker}</span>
+            <SectionTitle>{dictionary.home.categoriesTitle}</SectionTitle>
+            <p className="muted">{dictionary.home.categoriesDescription}</p>
+            <div className="bullet-list">
+              {storefrontCatalog.categories.map((category) => (
+                <div key={category.id} className="bullet-list__item">
+                  <strong>{category.name}</strong>
+                  <p className="muted">{category.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CustomerCard>
+
+        <CustomerCard tone="soft">
+          <div className="stack stack--sm">
+            <span className="section-kicker">{dictionary.home.featuredKicker}</span>
+            <SectionTitle>{dictionary.home.featuredTitle}</SectionTitle>
+            <p className="muted">{dictionary.home.featuredDescription}</p>
+            <div className="store-grid">
+              {storefrontCatalog.items.map((product) => (
+                <article key={product.id} className="store-product-card">
+                  <div className="store-product-card__meta">
+                    <span className="info-chip">{product.categoryName}</span>
+                    <strong>{product.name}</strong>
+                    <p className="muted">{product.shortDescription}</p>
+                  </div>
+                  <div className="store-product-card__pricing">
+                    <span>{formatUsd(product.priceUsd, locale)}</span>
+                    <small>
+                      {locale === 'es' ? 'Desde' : 'From'} {formatPoints(product.pointsFrom, locale)} pts
+                    </small>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </CustomerCard>
+      </section>
     </CustomerShell>
   );
 }

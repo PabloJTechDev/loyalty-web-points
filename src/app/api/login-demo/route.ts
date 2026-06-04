@@ -4,18 +4,27 @@ import {
   DEMO_SESSION_MAX_AGE_SECONDS,
   encodeDemoSession,
 } from '@/lib/auth/session';
+import {
+  businessTransactionsTotal,
+  observeRequest,
+} from '@/lib/metrics';
 import { defaultLocale, isLocale } from '@/lib/i18n/config';
 
 const bffBaseUrl = process.env.BFF_CUSTOMER_BASE_URL ?? 'http://localhost:3002';
 
 export async function POST(request: Request) {
+  const startedAt = performance.now();
+  const route = '/api/login-demo';
   const formData = await request.formData();
   const rawLocale = String(formData.get('locale') ?? defaultLocale);
   const locale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const requestId = String(formData.get('requestId') ?? '').trim();
 
   if (!requestId) {
-    return NextResponse.redirect(new URL(`/${locale}/login?status=missing-request`, request.url));
+    const redirect = NextResponse.redirect(new URL(`/${locale}/login?status=missing-request`, request.url));
+    observeRequest({ method: 'POST', route, statusCode: redirect.status, durationSeconds: (performance.now() - startedAt) / 1000 });
+    businessTransactionsTotal.inc({ flow: 'login', outcome: 'controlled_error' });
+    return redirect;
   }
 
   try {
@@ -29,15 +38,21 @@ export async function POST(request: Request) {
     });
 
     if (response.status === 404) {
-      return NextResponse.redirect(
+      const redirect = NextResponse.redirect(
         new URL(`/${locale}/login?status=password-change-not-found&requestId=${encodeURIComponent(requestId)}`, request.url),
       );
+      observeRequest({ method: 'POST', route, statusCode: redirect.status, durationSeconds: (performance.now() - startedAt) / 1000 });
+      businessTransactionsTotal.inc({ flow: 'login', outcome: 'controlled_error' });
+      return redirect;
     }
 
     if (!response.ok) {
-      return NextResponse.redirect(
+      const redirect = NextResponse.redirect(
         new URL(`/${locale}/login?status=error&requestId=${encodeURIComponent(requestId)}`, request.url),
       );
+      observeRequest({ method: 'POST', route, statusCode: redirect.status, durationSeconds: (performance.now() - startedAt) / 1000 });
+      businessTransactionsTotal.inc({ flow: 'login', outcome: 'error' });
+      return redirect;
     }
 
     const payload = (await response.json()) as {
@@ -72,10 +87,15 @@ export async function POST(request: Request) {
       maxAge: DEMO_SESSION_MAX_AGE_SECONDS,
     });
 
+    observeRequest({ method: 'POST', route, statusCode: responseRedirect.status, durationSeconds: (performance.now() - startedAt) / 1000 });
+    businessTransactionsTotal.inc({ flow: 'login', outcome: 'success' });
     return responseRedirect;
   } catch {
-    return NextResponse.redirect(
+    const redirect = NextResponse.redirect(
       new URL(`/${locale}/login?status=error&requestId=${encodeURIComponent(requestId)}`, request.url),
     );
+    observeRequest({ method: 'POST', route, statusCode: redirect.status, durationSeconds: (performance.now() - startedAt) / 1000 });
+    businessTransactionsTotal.inc({ flow: 'login', outcome: 'error' });
+    return redirect;
   }
 }

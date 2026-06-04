@@ -1,16 +1,25 @@
 import { NextResponse } from 'next/server';
+import {
+  businessTransactionsTotal,
+  observeRequest,
+} from '@/lib/metrics';
 import { defaultLocale, isLocale } from '@/lib/i18n/config';
 
 const bffBaseUrl = process.env.BFF_CUSTOMER_BASE_URL ?? 'http://localhost:3002';
 
 export async function POST(request: Request) {
+  const startedAt = performance.now();
+  const route = '/api/password-change-demo';
   const formData = await request.formData();
   const rawLocale = String(formData.get('locale') ?? defaultLocale);
   const locale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const transactionId = String(formData.get('transactionId') ?? '').trim();
 
   if (!transactionId) {
-    return NextResponse.redirect(new URL(`/${locale}/password-change?status=missing-transaction`, request.url));
+    const redirect = NextResponse.redirect(new URL(`/${locale}/password-change?status=missing-transaction`, request.url));
+    observeRequest({ method: 'POST', route, statusCode: redirect.status, durationSeconds: (performance.now() - startedAt) / 1000 });
+    businessTransactionsTotal.inc({ flow: 'password_change', outcome: 'controlled_error' });
+    return redirect;
   }
 
   try {
@@ -24,15 +33,21 @@ export async function POST(request: Request) {
     });
 
     if (response.status === 404) {
-      return NextResponse.redirect(
+      const redirect = NextResponse.redirect(
         new URL(`/${locale}/password-change?status=enrollment-not-found&transactionId=${encodeURIComponent(transactionId)}`, request.url),
       );
+      observeRequest({ method: 'POST', route, statusCode: redirect.status, durationSeconds: (performance.now() - startedAt) / 1000 });
+      businessTransactionsTotal.inc({ flow: 'password_change', outcome: 'controlled_error' });
+      return redirect;
     }
 
     if (!response.ok) {
-      return NextResponse.redirect(
+      const redirect = NextResponse.redirect(
         new URL(`/${locale}/password-change?status=error&transactionId=${encodeURIComponent(transactionId)}`, request.url),
       );
+      observeRequest({ method: 'POST', route, statusCode: redirect.status, durationSeconds: (performance.now() - startedAt) / 1000 });
+      businessTransactionsTotal.inc({ flow: 'password_change', outcome: 'error' });
+      return redirect;
     }
 
     const payload = (await response.json()) as {
@@ -44,10 +59,16 @@ export async function POST(request: Request) {
     url.searchParams.set('requestId', payload.requestId);
     url.searchParams.set('transactionId', payload.transactionId);
 
-    return NextResponse.redirect(url);
+    const redirect = NextResponse.redirect(url);
+    observeRequest({ method: 'POST', route, statusCode: redirect.status, durationSeconds: (performance.now() - startedAt) / 1000 });
+    businessTransactionsTotal.inc({ flow: 'password_change', outcome: 'success' });
+    return redirect;
   } catch {
-    return NextResponse.redirect(
+    const redirect = NextResponse.redirect(
       new URL(`/${locale}/password-change?status=error&transactionId=${encodeURIComponent(transactionId)}`, request.url),
     );
+    observeRequest({ method: 'POST', route, statusCode: redirect.status, durationSeconds: (performance.now() - startedAt) / 1000 });
+    businessTransactionsTotal.inc({ flow: 'password_change', outcome: 'error' });
+    return redirect;
   }
 }

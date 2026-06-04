@@ -13,18 +13,22 @@ interface CustomerNavProps {
 export function CustomerNav({ locale, dictionary }: CustomerNavProps) {
   const pathname = usePathname();
   const links = [
-    { href: `/${locale}`, label: dictionary.nav.home },
-    { href: `/${locale}/enroll`, label: dictionary.nav.enroll },
-    { href: `/${locale}/password-change`, label: dictionary.nav.passwordChange },
-    { href: `/${locale}/login`, label: dictionary.nav.login },
-    { href: `/${locale}/profile-summary`, label: dictionary.nav.profile },
-    { href: `/${locale}/wallet`, label: dictionary.nav.points },
+    { href: `/${locale}`, label: dictionary.nav.home, matcher: (value: string) => value === `/${locale}` },
+    {
+      href: `/${locale}/shop`,
+      label: dictionary.nav.shop,
+      matcher: (value: string) => value === `/${locale}/shop` || value.startsWith(`/${locale}/shop/`) && !value.startsWith(`/${locale}/shop/cart`),
+    },
+    { href: `/${locale}/shop/cart`, label: locale === 'es' ? 'Carrito' : 'Cart', matcher: (value: string) => value.startsWith(`/${locale}/shop/cart`) },
+    { href: `/${locale}/login`, label: dictionary.nav.login, matcher: (value: string) => value.startsWith(`/${locale}/login`) },
+    { href: `/${locale}/profile-summary`, label: dictionary.nav.profile, matcher: (value: string) => value.startsWith(`/${locale}/profile-summary`) },
+    { href: `/${locale}/wallet`, label: dictionary.nav.points, matcher: (value: string) => value.startsWith(`/${locale}/wallet`) },
   ];
 
   return (
     <nav className="top-nav top-nav--landing" aria-label="Main navigation">
       {links.map((link) => {
-        const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`);
+        const isActive = link.matcher(pathname);
 
         return (
           <Link

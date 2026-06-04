@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getDemoSession } from '@/lib/auth/session';
-import { getCustomerWallet } from '@/lib/api/customer';
+import { getCustomerLoginTraceByLoginId, getCustomerWallet } from '@/lib/api/customer';
 import { CustomerCard } from '@/features/customer/components/CustomerCard';
 import { CustomerPageHeader } from '@/features/customer/components/CustomerPageHeader';
 import { CustomerShell } from '@/features/customer/components/CustomerShell';
@@ -24,6 +24,10 @@ export default async function WalletPage({
     Promise.resolve(getDictionary(locale)),
     getDemoSession(),
   ]);
+
+  const loginTrace = authenticatedSession
+    ? await getCustomerLoginTraceByLoginId(authenticatedSession.loginId)
+    : null;
 
   return (
     <CustomerShell locale={locale} dictionary={dictionary} authenticatedSession={authenticatedSession}>
@@ -76,6 +80,37 @@ export default async function WalletPage({
           )}
         </div>
       </CustomerCard>
+
+      {loginTrace?.trace ? (
+        <CustomerCard tone="soft">
+          <div className="stack stack--sm">
+            <SectionTitle>{locale === 'es' ? 'Contexto real de la sesión' : 'Real session context'}</SectionTitle>
+            <div className="data-list">
+              <div className="data-row">
+                <span className="data-label">customerId</span>
+                <span className="data-value">{authenticatedSession?.customerId ?? loginTrace.trace.customerSnapshot.customerId}</span>
+              </div>
+              <div className="data-row">
+                <span className="data-label">loginId</span>
+                <span className="data-value">{loginTrace.trace.loginId}</span>
+              </div>
+              <div className="data-row">
+                <span className="data-label">transactionId</span>
+                <span className="data-value">{loginTrace.trace.transactionId}</span>
+              </div>
+              <div className="data-row">
+                <span className="data-label">{locale === 'es' ? 'Estado de sesión' : 'Session status'}</span>
+                <span className="data-value">{loginTrace.trace.session.status}</span>
+              </div>
+            </div>
+            <p className="muted">
+              {locale === 'es'
+                ? 'El wallet todavía usa datos demo para saldos y movimientos, pero la sesión autenticada y su trazabilidad ya vienen del flujo real web → BFF → core.'
+                : 'The wallet still uses demo balances and movements, but the authenticated session and its traceability already come from the real web → BFF → core flow.'}
+            </p>
+          </div>
+        </CustomerCard>
+      ) : null}
     </CustomerShell>
   );
 }

@@ -110,6 +110,49 @@ export interface CustomerLoginTraceDetailsResponse {
   coreRecord: CustomerLoginCoreRecord | null;
 }
 
+export interface CustomerProfileSummaryResponse {
+  customer: {
+    id: string;
+    documentType: string;
+    documentNumberMasked: string;
+    fullName: string;
+    email: string;
+    phoneMasked: string;
+  };
+  membership: {
+    status: string;
+    joinedAt: string;
+    tier: {
+      code: string;
+      name: string;
+    };
+  };
+  source:
+    | 'core-customer'
+    | 'mock_missing_context'
+    | 'mock_core_unavailable'
+    | 'mock_core_unavailable_data';
+  integrations?: {
+    coreCustomer?: {
+      available: boolean;
+      baseUrl?: string;
+      checkedAt?: string;
+      error?: string;
+    };
+  };
+}
+
+export interface CustomerProfileSummaryViewModel extends CustomerProfileSummaryResponse {
+  sourceDetails: {
+    profileSummary: CustomerProfileSummaryResponse['source'];
+    authenticatedSession: 'none' | 'login-trace';
+    visible: string;
+    usesFallback: boolean;
+    loginId?: string;
+  };
+  sessionTrace: CustomerLoginTraceDetailsResponse | null;
+}
+
 async function safeFetch<T>(path: string, fallback: T): Promise<T> {
   try {
     const response = await fetch(`${baseUrl}${path}`, {
@@ -126,12 +169,66 @@ async function safeFetch<T>(path: string, fallback: T): Promise<T> {
   }
 }
 
+function buildProfileSummarySourceDetails(
+  profileSource: CustomerProfileSummaryResponse['source'],
+  loginId: string | undefined,
+  hasSessionTrace: boolean,
+): CustomerProfileSummaryViewModel['sourceDetails'] {
+  return {
+    profileSummary: profileSource,
+    authenticatedSession: hasSessionTrace ? 'login-trace' : 'none',
+    visible: hasSessionTrace ? `${profileSource} + login-trace` : profileSource,
+    usesFallback: profileSource !== 'core-customer',
+    loginId,
+  };
+}
+
+function mergeProfileSummaryWithLoginTrace(
+  profileSummary: CustomerProfileSummaryResponse,
+  loginTrace: CustomerLoginTraceDetailsResponse,
+): CustomerProfileSummaryResponse {
+  return {
+    ...profileSummary,
+    customer: {
+      ...profileSummary.customer,
+      id: loginTrace.trace.customerSnapshot.customerId || profileSummary.customer.id,
+      fullName: loginTrace.trace.customerSnapshot.fullName || profileSummary.customer.fullName,
+      email: loginTrace.trace.customerSnapshot.maskedEmail || profileSummary.customer.email,
+    },
+    membership: {
+      ...profileSummary.membership,
+      tier: {
+        ...profileSummary.membership.tier,
+        name: loginTrace.trace.customerSnapshot.tierName || profileSummary.membership.tier.name,
+      },
+    },
+  };
+}
+
 export async function getCustomerHome() {
   return safeFetch('/api/v1/customer/home', customerHomeFallback);
 }
 
-export async function getCustomerProfileSummary() {
-  return safeFetch('/api/v1/customer/profile-summary', customerProfileSummaryFallback);
+export async function getCustomerProfileSummary(loginId?: string): Promise<CustomerProfileSummaryViewModel> {
+  const profileSummaryPath = loginId
+    ? `/api/v1/customer/profile-summary?loginId=${encodeURIComponent(loginId)}`
+    : '/api/v1/customer/profile-summary';
+
+  const [profileSummary, sessionTrace] = await Promise.all([
+    safeFetch(profileSummaryPath, customerProfileSummaryFallback as CustomerProfileSummaryResponse),
+    loginId ? getCustomerLoginTraceByLoginId(loginId) : Promise.resolve(null),
+  ]);
+
+  const hasSessionTrace = Boolean(loginId && sessionTrace?.trace);
+  const resolvedProfileSummary = hasSessionTrace && sessionTrace
+    ? mergeProfileSummaryWithLoginTrace(profileSummary, sessionTrace)
+    : profileSummary;
+
+  return {
+    ...resolvedProfileSummary,
+    sourceDetails: buildProfileSummarySourceDetails(profileSummary.source, loginId, hasSessionTrace),
+    sessionTrace: hasSessionTrace ? sessionTrace : null,
+  };
 }
 
 export async function getCustomerWallet() {
