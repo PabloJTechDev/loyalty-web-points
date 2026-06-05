@@ -1,4 +1,4 @@
-# loyalty-web
+# loyalty-web-points
 
 Customer-facing frontend for the **customer-first** loyalty journey.
 
@@ -6,9 +6,9 @@ This app is the presentation layer of the case study. It consumes the BFF server
 
 Part of the ecosystem:
 
-- `loyalty-web` → customer-facing frontend in **Next.js**
-- `loyalty-bff-customer` → experience-oriented BFF in **NestJS**
-- `loyalty-core-customer` → technical core service in **Go + Postgres**
+- `loyalty-web-points` → customer-facing frontend in **Next.js**
+- `loyalty-bff-points` → experience-oriented BFF in **NestJS**
+- `loyalty-core-points` → technical core service in **Go + Postgres**
 
 ```text
 Next.js web → NestJS BFF → Go core service + Postgres traces
@@ -18,7 +18,7 @@ Next.js web → NestJS BFF → Go core service + Postgres traces
 
 ## What this app is responsible for
 
-`loyalty-web` turns backend orchestration into a usable experience.
+`loyalty-web-points` turns backend orchestration into a usable experience.
 
 It is responsible for:
 
@@ -59,7 +59,7 @@ Routes already available:
 ## Technical highlights
 
 - **Next.js App Router** with server components where it helps
-- **server-side integration** with `loyalty-bff-customer`
+- **server-side integration** with `loyalty-bff-points`
 - **signed demo session cookie** with server-side expiration validation
 - **route protection** for authenticated area without depending on query params
 - **feature-oriented frontend structure**
@@ -108,8 +108,8 @@ This keeps the UI organized around domain experience instead of generic folders 
 
 ## Related repositories
 
-- `loyalty-bff-customer` → backend-for-frontend that powers this UI
-- `loyalty-core-customer` → technical traceability service used by the BFF
+- `loyalty-bff-points` → backend-for-frontend that powers this UI
+- `loyalty-core-points` → technical traceability service used by the BFF
 
 This repo should be readable on its own, but it is stronger when reviewed together with the BFF and core repos as one portfolio slice.
 
@@ -125,7 +125,7 @@ cp .env.example .env.local
 
 Main variables:
 
-- `BFF_CUSTOMER_BASE_URL=http://localhost:3002`
+- `BFF_POINTS_BASE_URL=http://localhost:3002`
 - `AUTH_DEMO_COOKIE_SECRET=change-me-for-publication-demo`
 
 ---

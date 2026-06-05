@@ -32,7 +32,7 @@ import {
   STOREFRONT_ORDER_HISTORY_COOKIE,
 } from '@/lib/storefront/order-history';
 
-const customerBaseUrl = process.env.BFF_CUSTOMER_BASE_URL ?? 'http://localhost:3002';
+const customerBaseUrl = process.env.BFF_POINTS_BASE_URL ?? 'http://localhost:3002';
 const storefrontBaseUrl = process.env.BFF_STOREFRONT_BASE_URL ?? customerBaseUrl;
 const configuredCatalogPath = process.env.BFF_STOREFRONT_CATALOG_PATH;
 const configuredProductPath = process.env.BFF_STOREFRONT_PRODUCT_PATH;

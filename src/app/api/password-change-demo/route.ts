@@ -5,7 +5,7 @@ import {
 } from '@/lib/metrics';
 import { defaultLocale, isLocale } from '@/lib/i18n/config';
 
-const bffBaseUrl = process.env.BFF_CUSTOMER_BASE_URL ?? 'http://localhost:3002';
+const bffBaseUrl = process.env.BFF_POINTS_BASE_URL ?? 'http://localhost:3002';
 
 export async function POST(request: Request) {
   const startedAt = performance.now();

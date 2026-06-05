@@ -2,7 +2,7 @@ import { customerHomeFallback } from '@/lib/mocks/customer-home';
 import { customerProfileSummaryFallback } from '@/lib/mocks/customer-profile-summary';
 import { customerWalletFallback } from '@/lib/mocks/customer-wallet';
 
-const baseUrl = process.env.BFF_CUSTOMER_BASE_URL ?? 'http://localhost:3002';
+const baseUrl = process.env.BFF_POINTS_BASE_URL ?? 'http://localhost:3002';
 
 export interface CustomerEnrollmentTrace {
   transactionId: string;
@@ -128,7 +128,7 @@ export interface CustomerProfileSummaryResponse {
     };
   };
   source:
-    | 'core-customer'
+    | 'core-points'
     | 'mock_missing_context'
     | 'mock_core_unavailable'
     | 'mock_core_unavailable_data';
@@ -178,7 +178,7 @@ function buildProfileSummarySourceDetails(
     profileSummary: profileSource,
     authenticatedSession: hasSessionTrace ? 'login-trace' : 'none',
     visible: hasSessionTrace ? `${profileSource} + login-trace` : profileSource,
-    usesFallback: profileSource !== 'core-customer',
+    usesFallback: profileSource !== 'core-points',
     loginId,
   };
 }
