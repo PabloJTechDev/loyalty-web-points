@@ -11,13 +11,12 @@ const es = {
   },
   nav: {
     home: 'Inicio',
-    shop: 'Tienda',
-    login: 'Login',
+        login: 'Login',
     profile: 'Perfil',
     points: 'Puntos',
   },
   home: {
-    badge: 'Storefront Demo',
+    badge: 'Points Experience',
     title: 'Compra productos en USD o usa tus puntos como parte del checkout.',
     description:
       'Una vitrina simple para mostrar el e-commerce conectado con loyalty: catálogo, precios en dólares, categorías visibles y una wallet secundaria para consultar saldo y movimientos.',

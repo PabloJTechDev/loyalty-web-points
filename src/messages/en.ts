@@ -11,13 +11,12 @@ const en = {
   },
   nav: {
     home: 'Home',
-    shop: 'Store',
-    login: 'Login',
+        login: 'Login',
     profile: 'Profile',
     points: 'Points',
   },
   home: {
-    badge: 'Storefront Demo',
+    badge: 'Points Experience',
     title: 'Buy products in USD or apply your points as part of checkout.',
     description:
       'A simple storefront to show e-commerce connected with loyalty: catalog, USD pricing, visible categories, and a secondary wallet to review balance and movements.',

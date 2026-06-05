@@ -59,9 +59,9 @@ export function CustomerShell({ children, locale, dictionary, authenticatedSessi
                 </form>
               </>
             ) : null}
-            <a href={`/${locale}/shop`} className="header-cta">
-              {dictionary.common.shopCta}
-            </a>
+            <Link href={`/es`} className="header-cta">
+              {dictionary.common.walletCta}
+            </Link>
           </div>
         </div>
       </header>
