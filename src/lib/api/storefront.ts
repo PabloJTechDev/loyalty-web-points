@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers';
 import type { Locale } from '@/lib/i18n/config';
 import {
   getStorefrontCatalogFallback,
@@ -25,6 +26,11 @@ import {
   type StorefrontOrderResponse,
   type StorefrontPlaceOrderInput,
 } from '@/lib/storefront/order';
+import {
+  decodeOrderHistory,
+  getOrderFromHistory,
+  STOREFRONT_ORDER_HISTORY_COOKIE,
+} from '@/lib/storefront/order-history';
 
 const customerBaseUrl = process.env.BFF_CUSTOMER_BASE_URL ?? 'http://localhost:3002';
 const storefrontBaseUrl = process.env.BFF_STOREFRONT_BASE_URL ?? customerBaseUrl;
@@ -116,6 +122,22 @@ interface RawStorefrontOrderLine {
   subtotalUsd?: unknown;
   categoryId?: unknown;
   categoryName?: unknown;
+}
+
+interface RawStorefrontOrderListResponse {
+  source?: string;
+  total?: unknown;
+  orders?: unknown[];
+  items?: unknown[];
+  integrations?: {
+    storefront?: {
+      available?: boolean;
+      baseUrl?: string;
+      checkedAt?: string;
+      path?: string;
+      error?: string;
+    };
+  };
 }
 
 interface RawStorefrontOrderResponse {
@@ -668,30 +690,12 @@ async function tryFetchReservationAction(
   };
 }
 
-async function tryFetchOrder(
-  path: string,
-  locale: Locale,
-  input: StorefrontPlaceOrderInput,
-): Promise<StorefrontOrderResponse | null> {
-  const response = await fetch(`${storefrontBaseUrl}${path}`, {
-    method: 'POST',
-    cache: 'no-store',
-    headers: {
-      'content-type': 'application/json',
-      'accept-language': locale,
-    },
-    body: JSON.stringify({
-      locale,
-      ...buildOrderPayload(input),
-    }),
-  });
-
-  if (!response.ok) {
-    return null;
-  }
-
-  const data = (await response.json()) as RawStorefrontOrderResponse;
-  const orderId = asString(data.orderId);
+function buildNormalizedOrderResponse(
+  data: RawStorefrontOrderResponse,
+  fallbackPath: string,
+  fallbackOrderId?: string,
+): StorefrontOrderResponse | null {
+  const orderId = asString(data.orderId) ?? fallbackOrderId;
   const reservationId = asString(data.reservationId);
   const status = asString(data.status);
   const currency = asString(data.currency);
@@ -749,11 +753,37 @@ async function tryFetchOrder(
         available: data.integrations?.storefront?.available ?? true,
         baseUrl: data.integrations?.storefront?.baseUrl ?? storefrontBaseUrl,
         checkedAt: data.integrations?.storefront?.checkedAt ?? new Date().toISOString(),
-        path: data.integrations?.storefront?.path ?? path,
+        path: data.integrations?.storefront?.path ?? fallbackPath,
         error: data.integrations?.storefront?.error,
       },
     },
   };
+}
+
+async function tryFetchOrder(
+  path: string,
+  locale: Locale,
+  input: StorefrontPlaceOrderInput,
+): Promise<StorefrontOrderResponse | null> {
+  const response = await fetch(`${storefrontBaseUrl}${path}`, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: {
+      'content-type': 'application/json',
+      'accept-language': locale,
+    },
+    body: JSON.stringify({
+      locale,
+      ...buildOrderPayload(input),
+    }),
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const data = (await response.json()) as RawStorefrontOrderResponse;
+  return buildNormalizedOrderResponse(data, path);
 }
 
 async function tryFetchOrderDetail(pathTemplate: string, orderId: string): Promise<StorefrontOrderResponse | null> {
@@ -765,68 +795,30 @@ async function tryFetchOrderDetail(pathTemplate: string, orderId: string): Promi
   }
 
   const data = (await response.json()) as RawStorefrontOrderResponse;
-  const reservationId = asString(data.reservationId);
-  const status = asString(data.status);
-  const currency = asString(data.currency);
-  const createdAt = asString(data.createdAt);
-  const linesSource = Array.isArray(data.lines)
-    ? data.lines
-    : Array.isArray(data.items)
-      ? data.items
-      : [];
-  const lines = linesSource.map(normalizeOrderLine).filter((line): line is StorefrontOrderLine => Boolean(line));
-  const summary = data.summary;
-  const message = asString(data.message);
+  return buildNormalizedOrderResponse(data, pathTemplate, orderId);
+}
 
-  if (!reservationId || status !== 'placed' || currency !== 'USD' || !createdAt || !isRecord(summary) || !message || !lines.length) {
+async function tryFetchOrders(path: string): Promise<StorefrontOrderResponse[] | null> {
+  const response = await fetch(`${storefrontBaseUrl}${path}`, { cache: 'no-store' });
+
+  if (!response.ok) {
     return null;
   }
 
-  const itemCount = asNumber(summary.itemCount);
-  const subtotalUsd = asNumber(summary.subtotalUsd);
-  const requestedPoints = asNumber(summary.requestedPoints);
-  const reservedPoints = asNumber(summary.reservedPoints);
-  const coveredUsd = asNumber(summary.coveredUsd);
-  const payableUsd = asNumber(summary.payableUsd);
+  const data = (await response.json()) as RawStorefrontOrderListResponse | RawStorefrontOrderResponse[];
+  const itemsSource: unknown[] = Array.isArray(data)
+    ? data
+    : Array.isArray((data as RawStorefrontOrderListResponse).orders)
+      ? (data as RawStorefrontOrderListResponse).orders ?? []
+      : Array.isArray((data as RawStorefrontOrderListResponse).items)
+        ? (data as RawStorefrontOrderListResponse).items ?? []
+        : [];
 
-  if (
-    itemCount === undefined ||
-    subtotalUsd === undefined ||
-    requestedPoints === undefined ||
-    reservedPoints === undefined ||
-    coveredUsd === undefined ||
-    payableUsd === undefined
-  ) {
-    return null;
-  }
+  const orders = itemsSource
+    .map((item) => buildNormalizedOrderResponse(item as RawStorefrontOrderResponse, path))
+    .filter((order): order is StorefrontOrderResponse => Boolean(order));
 
-  return {
-    source: asString(data.source) ?? 'storefront-bff-order',
-    orderId,
-    reservationId,
-    status: 'placed',
-    currency: 'USD',
-    createdAt,
-    lines,
-    summary: {
-      itemCount,
-      subtotalUsd,
-      requestedPoints,
-      reservedPoints,
-      coveredUsd,
-      payableUsd,
-    },
-    message,
-    integrations: {
-      storefront: {
-        available: data.integrations?.storefront?.available ?? true,
-        baseUrl: data.integrations?.storefront?.baseUrl ?? storefrontBaseUrl,
-        checkedAt: data.integrations?.storefront?.checkedAt ?? new Date().toISOString(),
-        path: data.integrations?.storefront?.path ?? pathTemplate,
-        error: data.integrations?.storefront?.error,
-      },
-    },
-  };
+  return orders.length ? orders : null;
 }
 
 export async function getStorefrontCatalog(locale: Locale): Promise<StorefrontCatalogResponse> {
@@ -987,6 +979,11 @@ export async function applyStorefrontReservationAction(
   });
 }
 
+async function getStorefrontOrderHistoryFromCookie(): Promise<StorefrontOrderResponse[]> {
+  const cookieStore = await cookies();
+  return decodeOrderHistory(cookieStore.get(STOREFRONT_ORDER_HISTORY_COOKIE)?.value);
+}
+
 export async function placeStorefrontOrder(
   locale: Locale,
   input: StorefrontPlaceOrderInput,
@@ -1021,6 +1018,21 @@ export async function placeStorefrontOrder(
   });
 }
 
+export async function getStorefrontOrders(): Promise<StorefrontOrderResponse[]> {
+  for (const path of defaultOrderPaths) {
+    try {
+      const orders = await tryFetchOrders(path);
+      if (orders) {
+        return orders;
+      }
+    } catch {
+      // Fall back to cookie history below.
+    }
+  }
+
+  return getStorefrontOrderHistoryFromCookie();
+}
+
 export async function getStorefrontOrderById(orderId: string): Promise<StorefrontOrderResponse | null> {
   for (const path of defaultOrderDetailPaths) {
     try {
@@ -1029,9 +1041,10 @@ export async function getStorefrontOrderById(orderId: string): Promise<Storefron
         return order;
       }
     } catch {
-      // Return null below when no compatible detail endpoint exists.
+      // Fall through to cookie history below.
     }
   }
 
-  return null;
+  const history = await getStorefrontOrderHistoryFromCookie();
+  return getOrderFromHistory(history, orderId);
 }

@@ -131,8 +131,8 @@ export default async function StoreOrderDetailPage({
                 </div>
               </div>
               <div className="link-list">
-                <Link href={`/${locale}/shop/checkout/success?orderId=${order.orderId}`}>
-                  {locale === 'es' ? 'Volver a success page' : 'Back to success page'}
+                <Link href={`/${locale}/shop/orders`}>
+                  {locale === 'es' ? 'Volver al historial' : 'Back to order history'}
                 </Link>
                 <Link href={`/${locale}/shop`}>
                   {locale === 'es' ? 'Seguir explorando catálogo' : 'Keep exploring the catalog'}

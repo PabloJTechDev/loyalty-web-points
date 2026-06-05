@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { defaultLocale, isLocale } from '@/lib/i18n/config';
 import { getStorefrontQuote, placeStorefrontOrder } from '@/lib/api/storefront';
+import {
+  decodeOrderHistory,
+  encodeOrderHistory,
+  STOREFRONT_ORDER_HISTORY_COOKIE,
+  upsertOrderInHistory,
+} from '@/lib/storefront/order-history';
 
 function parseItems(rawItems: string) {
   try {
@@ -16,6 +22,16 @@ function parseItems(rawItems: string) {
   } catch {
     return [];
   }
+}
+
+function getCookieValue(cookieHeader: string | null, name: string): string | undefined {
+  if (!cookieHeader) return undefined;
+
+  return cookieHeader
+    .split(';')
+    .map((item) => item.trim())
+    .find((item) => item.startsWith(`${name}=`))
+    ?.slice(name.length + 1);
 }
 
 export async function POST(request: Request) {
@@ -50,9 +66,23 @@ export async function POST(request: Request) {
       quote,
     });
 
-    return NextResponse.redirect(
+    const currentHistory = decodeOrderHistory(
+      getCookieValue(request.headers.get('cookie'), STOREFRONT_ORDER_HISTORY_COOKIE),
+    );
+    const nextHistory = upsertOrderInHistory(currentHistory, order);
+
+    const response = NextResponse.redirect(
       new URL(`/${locale}/shop/checkout/success?orderId=${encodeURIComponent(order.orderId)}`, request.url),
     );
+
+    response.cookies.set(STOREFRONT_ORDER_HISTORY_COOKIE, encodeOrderHistory(nextHistory), {
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7,
+    });
+
+    return response;
   } catch (error) {
     redirectUrl.searchParams.set('actionStatus', 'rejected');
     redirectUrl.searchParams.set(

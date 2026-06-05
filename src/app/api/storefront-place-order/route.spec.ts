@@ -4,6 +4,7 @@ vi.mock('@/lib/api/storefront', () => ({
 }));
 
 import { getStorefrontQuote, placeStorefrontOrder } from '@/lib/api/storefront';
+import { decodeOrderHistory, STOREFRONT_ORDER_HISTORY_COOKIE } from '@/lib/storefront/order-history';
 import { POST } from './route';
 
 function buildRequest(fields: Record<string, string>) {
@@ -82,6 +83,10 @@ describe('POST /api/storefront-place-order', () => {
     expect(response.headers.get('location')).toBe(
       'https://example.com/es/shop/checkout/success?orderId=ord-123',
     );
+    const setCookie = response.headers.get('set-cookie');
+    expect(setCookie).toContain(`${STOREFRONT_ORDER_HISTORY_COOKIE}=`);
+    const encoded = setCookie?.match(new RegExp(`${STOREFRONT_ORDER_HISTORY_COOKIE}=([^;]+)`))?.[1];
+    expect(decodeOrderHistory(encoded)).toHaveLength(1);
   });
 
   it('redirects back to checkout when order placement fails', async () => {
@@ -126,5 +131,6 @@ describe('POST /api/storefront-place-order', () => {
     expect(response.headers.get('location')).toBe(
       'https://example.com/es/shop/checkout?actionStatus=rejected&actionMessage=A+confirmed+reservation+with+quote+lines+is+required+before+placing+an+order.',
     );
+    expect(response.headers.get('set-cookie')).toBeNull();
   });
 });

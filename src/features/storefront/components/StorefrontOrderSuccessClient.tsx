@@ -45,9 +45,9 @@ export function StorefrontOrderSuccessClient({ locale, order }: StorefrontOrderS
         reservedPoints: 'Puntos aplicados',
         coveredAmount: 'Monto cubierto',
         payableAmount: 'Monto pagado',
+        viewHistory: 'Ver historial de órdenes',
         viewOrder: 'Ver detalle de la orden',
         backToShop: 'Volver a la tienda',
-        backToCheckout: 'Volver a checkout',
       }
     : {
         successKicker: 'Mock order placement',
@@ -66,9 +66,9 @@ export function StorefrontOrderSuccessClient({ locale, order }: StorefrontOrderS
         reservedPoints: 'Applied points',
         coveredAmount: 'Covered amount',
         payableAmount: 'Paid amount',
+        viewHistory: 'View order history',
         viewOrder: 'View order detail',
         backToShop: 'Back to shop',
-        backToCheckout: 'Back to checkout',
       };
 
   return (
@@ -148,14 +148,14 @@ export function StorefrontOrderSuccessClient({ locale, order }: StorefrontOrderS
               </div>
             </div>
             <div className="hero-actions">
-              <Link href={`/${locale}/shop/orders/${order.orderId}`} className="button button--primary">
+              <Link href={`/${locale}/shop/orders`} className="button button--primary">
+                {copy.viewHistory}
+              </Link>
+              <Link href={`/${locale}/shop/orders/${order.orderId}`} className="button button--secondary">
                 {copy.viewOrder}
               </Link>
-              <Link href={`/${locale}/shop`} className="button button--secondary">
+              <Link href={`/${locale}/shop`} className="button button--ghost">
                 {copy.backToShop}
-              </Link>
-              <Link href={`/${locale}/shop/checkout`} className="button button--ghost">
-                {copy.backToCheckout}
               </Link>
             </div>
           </div>

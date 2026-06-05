@@ -20,6 +20,7 @@ export function CustomerNav({ locale, dictionary }: CustomerNavProps) {
       matcher: (value: string) => value === `/${locale}/shop` || value.startsWith(`/${locale}/shop/`) && !value.startsWith(`/${locale}/shop/cart`),
     },
     { href: `/${locale}/shop/cart`, label: locale === 'es' ? 'Carrito' : 'Cart', matcher: (value: string) => value.startsWith(`/${locale}/shop/cart`) || value.startsWith(`/${locale}/shop/checkout`) },
+    { href: `/${locale}/shop/orders`, label: locale === 'es' ? 'Órdenes' : 'Orders', matcher: (value: string) => value.startsWith(`/${locale}/shop/orders`) },
     { href: `/${locale}/login`, label: dictionary.nav.login, matcher: (value: string) => value.startsWith(`/${locale}/login`) },
     { href: `/${locale}/profile-summary`, label: dictionary.nav.profile, matcher: (value: string) => value.startsWith(`/${locale}/profile-summary`) },
     { href: `/${locale}/wallet`, label: dictionary.nav.points, matcher: (value: string) => value.startsWith(`/${locale}/wallet`) },
