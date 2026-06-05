@@ -18,6 +18,13 @@ import {
   type StorefrontReservationActionResponse,
   type StorefrontReserveResponse,
 } from '@/lib/storefront/reserve';
+import {
+  buildStorefrontFallbackOrder,
+  canPlaceStorefrontOrder,
+  type StorefrontOrderLine,
+  type StorefrontOrderResponse,
+  type StorefrontPlaceOrderInput,
+} from '@/lib/storefront/order';
 
 const customerBaseUrl = process.env.BFF_CUSTOMER_BASE_URL ?? 'http://localhost:3002';
 const storefrontBaseUrl = process.env.BFF_STOREFRONT_BASE_URL ?? customerBaseUrl;
@@ -27,6 +34,8 @@ const configuredQuotePath = process.env.BFF_STOREFRONT_QUOTE_PATH;
 const configuredReservePath = process.env.BFF_STOREFRONT_RESERVE_PATH;
 const configuredConfirmPath = process.env.BFF_STOREFRONT_CONFIRM_PATH;
 const configuredCancelPath = process.env.BFF_STOREFRONT_CANCEL_PATH;
+const configuredOrderPath = process.env.BFF_STOREFRONT_ORDER_PATH;
+const configuredOrderDetailPath = process.env.BFF_STOREFRONT_ORDER_DETAIL_PATH;
 
 const defaultCatalogPaths = configuredCatalogPath
   ? [configuredCatalogPath]
@@ -52,6 +61,14 @@ const defaultCancelPaths = configuredCancelPath
   ? [configuredCancelPath]
   : ['/api/v1/storefront/cancel', '/v1/storefront/cancel', '/api/v1/redemptions/cancel', '/v1/redemptions/cancel', '/api/v1/storefront/cart/cancel', '/v1/storefront/cart/cancel'];
 
+const defaultOrderPaths = configuredOrderPath
+  ? [configuredOrderPath]
+  : ['/api/v1/storefront/orders', '/v1/storefront/orders'];
+
+const defaultOrderDetailPaths = configuredOrderDetailPath
+  ? [configuredOrderDetailPath]
+  : ['/api/v1/storefront/orders/{orderId}', '/v1/storefront/orders/{orderId}'];
+
 interface StorefrontCatalogFetchResult {
   payload: StorefrontCatalogResponse;
   path?: string;
@@ -74,6 +91,49 @@ interface RawStorefrontReservationResponse {
     coveredUsd?: unknown;
     payableUsd?: unknown;
     releasedPoints?: unknown;
+  };
+  message?: unknown;
+  integrations?: {
+    storefront?: {
+      available?: boolean;
+      baseUrl?: string;
+      checkedAt?: string;
+      path?: string;
+      error?: string;
+    };
+  };
+}
+
+interface RawStorefrontOrderLine {
+  productId?: unknown;
+  sku?: unknown;
+  name?: unknown;
+  title?: unknown;
+  quantity?: unknown;
+  unitPriceUsd?: unknown;
+  priceUsd?: unknown;
+  lineSubtotalUsd?: unknown;
+  subtotalUsd?: unknown;
+  categoryId?: unknown;
+  categoryName?: unknown;
+}
+
+interface RawStorefrontOrderResponse {
+  source?: string;
+  orderId?: unknown;
+  reservationId?: unknown;
+  status?: unknown;
+  currency?: unknown;
+  createdAt?: unknown;
+  lines?: unknown[];
+  items?: unknown[];
+  summary?: {
+    itemCount?: unknown;
+    subtotalUsd?: unknown;
+    requestedPoints?: unknown;
+    reservedPoints?: unknown;
+    coveredUsd?: unknown;
+    payableUsd?: unknown;
   };
   message?: unknown;
   integrations?: {
@@ -418,52 +478,6 @@ async function tryFetchQuote(
   };
 }
 
-export async function getStorefrontCatalog(locale: Locale): Promise<StorefrontCatalogResponse> {
-  const fallback = getStorefrontCatalogFallback(locale);
-  let lastError: string | undefined;
-
-  for (const path of defaultCatalogPaths) {
-    try {
-      const result = await tryFetchCatalog(path);
-      if (result) {
-        return result.payload;
-      }
-      lastError = `No compatible storefront payload found at ${path}`;
-    } catch (error) {
-      lastError = error instanceof Error ? error.message : `Storefront request failed at ${path}`;
-    }
-  }
-
-  return {
-    ...fallback,
-    integrations: {
-      storefront: {
-        ...fallback.integrations.storefront,
-        baseUrl: storefrontBaseUrl,
-        checkedAt: new Date().toISOString(),
-        path: configuredCatalogPath ?? defaultCatalogPaths.join(', '),
-        error: lastError,
-      },
-    },
-  };
-}
-
-export async function getStorefrontProductById(locale: Locale, productId: string): Promise<StorefrontCatalogItem | null> {
-  for (const path of defaultProductPaths) {
-    try {
-      const product = await tryFetchProduct(path, productId);
-      if (product) {
-        return product;
-      }
-    } catch {
-      // Fall back to catalog lookup below.
-    }
-  }
-
-  const catalog = await getStorefrontCatalog(locale);
-  return catalog.items.find((item) => item.id === productId || item.sku === productId) ?? null;
-}
-
 function buildReservationPayload(quote: StorefrontQuoteResponse) {
   return {
     currency: 'USD',
@@ -475,6 +489,48 @@ function buildReservationPayload(quote: StorefrontQuoteResponse) {
     appliedPoints: quote.summary.appliedPoints,
     availablePoints: quote.summary.availablePoints,
     subtotalUsd: quote.summary.subtotalUsd,
+  };
+}
+
+function buildOrderPayload(input: StorefrontPlaceOrderInput) {
+  return {
+    currency: 'USD',
+    reservationId: input.reservationId,
+    lines: input.quote.lines.map((line) => ({
+      productId: line.productId,
+      quantity: line.quantity,
+    })),
+    requestedPoints: input.requestedPoints,
+    reservedPoints: input.reservedPoints,
+    coveredUsd: input.coveredUsd,
+    payableUsd: input.payableUsd,
+  };
+}
+
+function normalizeOrderLine(value: unknown): StorefrontOrderLine | null {
+  if (!isRecord(value)) return null;
+
+  const line = value as RawStorefrontOrderLine;
+  const productId = asString(line.productId);
+  const sku = asString(line.sku);
+  const name = asString(line.name) ?? asString(line.title);
+  const quantity = asNumber(line.quantity);
+  const unitPriceUsd = asNumber(line.unitPriceUsd) ?? asNumber(line.priceUsd);
+  const lineSubtotalUsd = asNumber(line.lineSubtotalUsd) ?? asNumber(line.subtotalUsd);
+
+  if (!productId || !sku || !name || quantity === undefined || unitPriceUsd === undefined || lineSubtotalUsd === undefined) {
+    return null;
+  }
+
+  return {
+    productId,
+    sku,
+    name,
+    quantity,
+    unitPriceUsd,
+    lineSubtotalUsd,
+    categoryId: asString(line.categoryId),
+    categoryName: asString(line.categoryName),
   };
 }
 
@@ -612,6 +668,213 @@ async function tryFetchReservationAction(
   };
 }
 
+async function tryFetchOrder(
+  path: string,
+  locale: Locale,
+  input: StorefrontPlaceOrderInput,
+): Promise<StorefrontOrderResponse | null> {
+  const response = await fetch(`${storefrontBaseUrl}${path}`, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: {
+      'content-type': 'application/json',
+      'accept-language': locale,
+    },
+    body: JSON.stringify({
+      locale,
+      ...buildOrderPayload(input),
+    }),
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const data = (await response.json()) as RawStorefrontOrderResponse;
+  const orderId = asString(data.orderId);
+  const reservationId = asString(data.reservationId);
+  const status = asString(data.status);
+  const currency = asString(data.currency);
+  const createdAt = asString(data.createdAt);
+  const linesSource = Array.isArray(data.lines)
+    ? data.lines
+    : Array.isArray(data.items)
+      ? data.items
+      : [];
+  const lines = linesSource.map(normalizeOrderLine).filter((line): line is StorefrontOrderLine => Boolean(line));
+  const summary = data.summary;
+  const message = asString(data.message);
+
+  if (!orderId || !reservationId || status !== 'placed' || currency !== 'USD' || !createdAt || !isRecord(summary) || !message || !lines.length) {
+    return null;
+  }
+
+  const itemCount = asNumber(summary.itemCount);
+  const subtotalUsd = asNumber(summary.subtotalUsd);
+  const requestedPoints = asNumber(summary.requestedPoints);
+  const reservedPoints = asNumber(summary.reservedPoints);
+  const coveredUsd = asNumber(summary.coveredUsd);
+  const payableUsd = asNumber(summary.payableUsd);
+
+  if (
+    itemCount === undefined ||
+    subtotalUsd === undefined ||
+    requestedPoints === undefined ||
+    reservedPoints === undefined ||
+    coveredUsd === undefined ||
+    payableUsd === undefined
+  ) {
+    return null;
+  }
+
+  return {
+    source: asString(data.source) ?? 'storefront-bff-order',
+    orderId,
+    reservationId,
+    status: 'placed',
+    currency: 'USD',
+    createdAt,
+    lines,
+    summary: {
+      itemCount,
+      subtotalUsd,
+      requestedPoints,
+      reservedPoints,
+      coveredUsd,
+      payableUsd,
+    },
+    message,
+    integrations: {
+      storefront: {
+        available: data.integrations?.storefront?.available ?? true,
+        baseUrl: data.integrations?.storefront?.baseUrl ?? storefrontBaseUrl,
+        checkedAt: data.integrations?.storefront?.checkedAt ?? new Date().toISOString(),
+        path: data.integrations?.storefront?.path ?? path,
+        error: data.integrations?.storefront?.error,
+      },
+    },
+  };
+}
+
+async function tryFetchOrderDetail(pathTemplate: string, orderId: string): Promise<StorefrontOrderResponse | null> {
+  const path = replaceProductPath(pathTemplate, orderId);
+  const response = await fetch(`${storefrontBaseUrl}${path}`, { cache: 'no-store' });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const data = (await response.json()) as RawStorefrontOrderResponse;
+  const reservationId = asString(data.reservationId);
+  const status = asString(data.status);
+  const currency = asString(data.currency);
+  const createdAt = asString(data.createdAt);
+  const linesSource = Array.isArray(data.lines)
+    ? data.lines
+    : Array.isArray(data.items)
+      ? data.items
+      : [];
+  const lines = linesSource.map(normalizeOrderLine).filter((line): line is StorefrontOrderLine => Boolean(line));
+  const summary = data.summary;
+  const message = asString(data.message);
+
+  if (!reservationId || status !== 'placed' || currency !== 'USD' || !createdAt || !isRecord(summary) || !message || !lines.length) {
+    return null;
+  }
+
+  const itemCount = asNumber(summary.itemCount);
+  const subtotalUsd = asNumber(summary.subtotalUsd);
+  const requestedPoints = asNumber(summary.requestedPoints);
+  const reservedPoints = asNumber(summary.reservedPoints);
+  const coveredUsd = asNumber(summary.coveredUsd);
+  const payableUsd = asNumber(summary.payableUsd);
+
+  if (
+    itemCount === undefined ||
+    subtotalUsd === undefined ||
+    requestedPoints === undefined ||
+    reservedPoints === undefined ||
+    coveredUsd === undefined ||
+    payableUsd === undefined
+  ) {
+    return null;
+  }
+
+  return {
+    source: asString(data.source) ?? 'storefront-bff-order',
+    orderId,
+    reservationId,
+    status: 'placed',
+    currency: 'USD',
+    createdAt,
+    lines,
+    summary: {
+      itemCount,
+      subtotalUsd,
+      requestedPoints,
+      reservedPoints,
+      coveredUsd,
+      payableUsd,
+    },
+    message,
+    integrations: {
+      storefront: {
+        available: data.integrations?.storefront?.available ?? true,
+        baseUrl: data.integrations?.storefront?.baseUrl ?? storefrontBaseUrl,
+        checkedAt: data.integrations?.storefront?.checkedAt ?? new Date().toISOString(),
+        path: data.integrations?.storefront?.path ?? pathTemplate,
+        error: data.integrations?.storefront?.error,
+      },
+    },
+  };
+}
+
+export async function getStorefrontCatalog(locale: Locale): Promise<StorefrontCatalogResponse> {
+  const fallback = getStorefrontCatalogFallback(locale);
+  let lastError: string | undefined;
+
+  for (const path of defaultCatalogPaths) {
+    try {
+      const result = await tryFetchCatalog(path);
+      if (result) {
+        return result.payload;
+      }
+      lastError = `No compatible storefront payload found at ${path}`;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : `Storefront request failed at ${path}`;
+    }
+  }
+
+  return {
+    ...fallback,
+    integrations: {
+      storefront: {
+        ...fallback.integrations.storefront,
+        baseUrl: storefrontBaseUrl,
+        checkedAt: new Date().toISOString(),
+        path: configuredCatalogPath ?? defaultCatalogPaths.join(', '),
+        error: lastError,
+      },
+    },
+  };
+}
+
+export async function getStorefrontProductById(locale: Locale, productId: string): Promise<StorefrontCatalogItem | null> {
+  for (const path of defaultProductPaths) {
+    try {
+      const product = await tryFetchProduct(path, productId);
+      if (product) {
+        return product;
+      }
+    } catch {
+      // Fall back to catalog lookup below.
+    }
+  }
+
+  const catalog = await getStorefrontCatalog(locale);
+  return catalog.items.find((item) => item.id === productId || item.sku === productId) ?? null;
+}
+
 export async function getStorefrontQuote(
   locale: Locale,
   lines: StorefrontQuoteLineInput[],
@@ -722,4 +985,53 @@ export async function applyStorefrontReservationAction(
       error: lastError,
     },
   });
+}
+
+export async function placeStorefrontOrder(
+  locale: Locale,
+  input: StorefrontPlaceOrderInput,
+): Promise<StorefrontOrderResponse> {
+  if (!canPlaceStorefrontOrder(input)) {
+    throw new Error('A confirmed reservation with quote lines is required before placing an order.');
+  }
+
+  let lastError: string | undefined;
+
+  for (const path of defaultOrderPaths) {
+    try {
+      const order = await tryFetchOrder(path, locale, input);
+      if (order) {
+        return order;
+      }
+      lastError = `No compatible storefront order payload found at ${path}`;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : `Storefront order request failed at ${path}`;
+    }
+  }
+
+  return buildStorefrontFallbackOrder(input, {
+    source: 'mock-storefront-order',
+    integration: {
+      available: false,
+      baseUrl: storefrontBaseUrl,
+      checkedAt: new Date().toISOString(),
+      path: configuredOrderPath ?? defaultOrderPaths.join(', '),
+      error: lastError,
+    },
+  });
+}
+
+export async function getStorefrontOrderById(orderId: string): Promise<StorefrontOrderResponse | null> {
+  for (const path of defaultOrderDetailPaths) {
+    try {
+      const order = await tryFetchOrderDetail(path, orderId);
+      if (order) {
+        return order;
+      }
+    } catch {
+      // Return null below when no compatible detail endpoint exists.
+    }
+  }
+
+  return null;
 }

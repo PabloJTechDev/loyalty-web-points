@@ -134,6 +134,8 @@ export function StorefrontCheckoutClient({
         integrationError: 'Último error integración',
         confirmButton: 'Confirmar reserva',
         cancelButton: 'Cancelar reserva',
+        placeOrderButton: 'Colocar orden',
+        placeOrderDisabled: 'Primero confirma la reserva para poder colocar la orden.',
         actionResult: 'Acción aplicada',
         actionConfirm: 'Confirmación ejecutada',
         actionCancel: 'Cancelación ejecutada',
@@ -183,6 +185,8 @@ export function StorefrontCheckoutClient({
         integrationError: 'Latest integration error',
         confirmButton: 'Confirm reservation',
         cancelButton: 'Cancel reservation',
+        placeOrderButton: 'Place order',
+        placeOrderDisabled: 'Confirm the reservation first before placing the order.',
         actionResult: 'Action result',
         actionConfirm: 'Confirmation executed',
         actionCancel: 'Cancellation executed',
@@ -192,6 +196,7 @@ export function StorefrontCheckoutClient({
       };
 
   const activeReservation = hasActiveReservation(feedback?.status);
+  const canPlaceOrder = feedback?.status === 'confirmed' && Boolean(feedback?.reservationId);
 
   const feedbackTone = feedback?.status === 'rejected' || feedback?.actionStatus === 'rejected'
     ? 'trace-notice trace-notice--error'
@@ -280,7 +285,7 @@ export function StorefrontCheckoutClient({
               <div className="data-row">
                 <span className="data-label">{copy.reservationState}</span>
                 <span className="data-value">
-                  <span className={`info-chip ${activeReservation ? 'info-chip--success' : ''}`}>{visibleStateLabel}</span>
+                  <span className={`info-chip ${activeReservation || canPlaceOrder ? 'info-chip--success' : ''}`}>{visibleStateLabel}</span>
                 </span>
               </div>
               <div className="data-row">
@@ -436,6 +441,22 @@ export function StorefrontCheckoutClient({
           </div>
 
           {!activeReservation ? <p className="trace-note">{copy.noReservationActions}</p> : null}
+
+          <form action="/api/storefront-place-order" method="post" className="stack stack--sm storefront-reserve-form">
+            <input type="hidden" name="locale" value={locale} />
+            <input type="hidden" name="items" value={JSON.stringify(items)} />
+            <input type="hidden" name="availablePoints" value={String(availablePoints)} />
+            <input type="hidden" name="requestedPoints" value={String(feedback?.requestedPoints ?? safeRequestedPoints)} />
+            <input type="hidden" name="reserveStatus" value={feedback?.status ?? ''} />
+            <input type="hidden" name="reservedPoints" value={String(feedback?.reservedPoints ?? quote.summary.appliedPoints)} />
+            <input type="hidden" name="coveredUsd" value={String(feedback?.coveredUsd ?? quote.summary.appliedUsd)} />
+            <input type="hidden" name="payableUsd" value={String(feedback?.payableUsd ?? quote.summary.remainingUsd)} />
+            <input type="hidden" name="reservationId" value={feedback?.reservationId ?? ''} />
+            <button type="submit" className="button button--primary button--full" disabled={!canPlaceOrder}>
+              {copy.placeOrderButton}
+            </button>
+            {!canPlaceOrder ? <p className="trace-note">{copy.placeOrderDisabled}</p> : null}
+          </form>
 
           <div className="hero-actions">
             <Link href={`/${locale}/shop/cart`} className="button button--secondary">
