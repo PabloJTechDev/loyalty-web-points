@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getDemoSession } from '@/lib/auth/session';
-import { getCustomerLoginTraceByLoginId, getCustomerWallet } from '@/lib/api/customer';
+import { getCustomerLoginTraceByLoginId, getCustomerWallet, getPointsBalance, getPointsTransactions } from '@/lib/api/customer';
 import { CustomerCard } from '@/features/customer/components/CustomerCard';
 import { CustomerPageHeader } from '@/features/customer/components/CustomerPageHeader';
 import { CustomerShell } from '@/features/customer/components/CustomerShell';
@@ -29,29 +29,54 @@ export default async function WalletPage({
     ? await getCustomerLoginTraceByLoginId(authenticatedSession.loginId)
     : null;
 
+  const [pointsBalance, pointsTransactions] = authenticatedSession?.customerId
+    ? await Promise.all([
+        getPointsBalance(authenticatedSession.customerId),
+        getPointsTransactions(authenticatedSession.customerId),
+      ])
+    : [null, null];
+
+  const hasRealPoints = pointsBalance && pointsBalance.source === 'core-points';
+
   return (
     <CustomerShell locale={locale} dictionary={dictionary} authenticatedSession={authenticatedSession}>
       <CustomerPageHeader
-        badge={`${dictionary.wallet.badge} · ${dictionary.common.source}: ${data.source ?? 'unknown'}`}
+        badge={`${dictionary.wallet.badge} · ${dictionary.common.source}: ${hasRealPoints ? 'core-points' : data.source ?? 'unknown'}`}
         title={dictionary.wallet.title}
         description={dictionary.wallet.description}
         aside={<div className="info-chip">{dictionary.wallet.chip}</div>}
       />
 
       <section className="grid grid--metrics">
-        <MetricCard title={dictionary.wallet.metrics.available} value={formatPoints(data.summary.availablePoints, locale)} />
-        <MetricCard title={dictionary.wallet.metrics.pending} value={formatPoints(data.summary.pendingPoints, locale)} />
+        <MetricCard title={dictionary.wallet.metrics.available} value={formatPoints(hasRealPoints ? pointsBalance.balancePoints : data.summary.availablePoints, locale)} />
+        <MetricCard title={locale === 'es' ? 'Total acumulado' : 'Lifetime accrued'} value={formatPoints(hasRealPoints ? pointsBalance.lifetimeAccrued : data.summary.pendingPoints, locale)} />
         <MetricCard
-          title={dictionary.wallet.metrics.expiring}
-          value={formatPoints(data.summary.expiringPoints, locale)}
-          description={`${dictionary.wallet.metrics.expiringDescPrefix} ${formatDate(data.summary.expiringAt, locale)}`}
+          title={locale === 'es' ? 'Total canjeado' : 'Lifetime redeemed'}
+          value={formatPoints(hasRealPoints ? pointsBalance.lifetimeRedeemed : data.summary.expiringPoints, locale)}
         />
       </section>
 
       <CustomerCard>
         <div className="stack stack--sm">
           <SectionTitle>{dictionary.wallet.movements}</SectionTitle>
-          {data.movements.length ? (
+          {hasRealPoints && pointsTransactions && pointsTransactions.items.length ? (
+            <div className="activity-list">
+              {pointsTransactions.items.map(
+                (tx: { transactionId: string; type: string; points: number; description: string; createdAt: string }) => (
+                  <div key={tx.transactionId} className="activity-item">
+                    <div className="activity-item__meta">
+                      <strong>{tx.description}</strong>
+                      <p className="muted">{tx.type} · {formatDate(tx.createdAt, locale)}</p>
+                    </div>
+                    <strong className={tx.type === 'accrue' ? 'points-positive' : 'points-negative'}>
+                      {tx.type === 'accrue' ? '+' : '-'}
+                      {formatPoints(tx.points, locale)} pts
+                    </strong>
+                  </div>
+                ),
+              )}
+            </div>
+          ) : data.movements.length ? (
             <div className="activity-list">
               {data.movements.map(
                 (movement: { id: string; description: string; points: number; occurredAt: string }) => (
@@ -95,19 +120,10 @@ export default async function WalletPage({
                 <span className="data-value">{loginTrace.trace.loginId}</span>
               </div>
               <div className="data-row">
-                <span className="data-label">transactionId</span>
-                <span className="data-value">{loginTrace.trace.transactionId}</span>
-              </div>
-              <div className="data-row">
-                <span className="data-label">{locale === 'es' ? 'Estado de sesión' : 'Session status'}</span>
-                <span className="data-value">{loginTrace.trace.session.status}</span>
+                <span className="data-label">balance</span>
+                <span className="data-value">{hasRealPoints ? `${pointsBalance.balancePoints} pts` : 'sin cuenta'}</span>
               </div>
             </div>
-            <p className="muted">
-              {locale === 'es'
-                ? 'El wallet todavía usa datos demo para saldos y movimientos, pero la sesión autenticada y su trazabilidad ya vienen del flujo real web → BFF → core.'
-                : 'The wallet still uses demo balances and movements, but the authenticated session and its traceability already come from the real web → BFF → core flow.'}
-            </p>
           </div>
         </CustomerCard>
       ) : null}

@@ -235,6 +235,20 @@ export async function getCustomerWallet() {
   return safeFetch('/api/v1/customer/wallet', customerWalletFallback);
 }
 
+export async function getPointsBalance(customerId: string) {
+  return safeFetch(`/api/v1/customer/points/${encodeURIComponent(customerId)}/balance`, {
+    customerId,
+    balancePoints: 0,
+    lifetimeAccrued: 0,
+    lifetimeRedeemed: 0,
+    source: 'fallback',
+  });
+}
+
+export async function getPointsTransactions(customerId: string) {
+  return safeFetch(`/api/v1/customer/points/${encodeURIComponent(customerId)}/transactions`, { items: [], total: 0 });
+}
+
 export async function getCustomerEnrollmentTraces(): Promise<CustomerEnrollmentTraceListResponse> {
   return safeFetch('/api/v1/customer/enrollment-traces', {
     defaultEmail: 'inscripcion@pablov.dev',
