@@ -1,4 +1,4 @@
-import type { Locale } from '@/lib/i18n/config';
+import type { Locale } from '@/shared/i18n/config';
 
 export function formatPoints(value: number, locale: Locale) {
   return new Intl.NumberFormat(locale === 'es' ? 'es-CL' : 'en-US').format(value);

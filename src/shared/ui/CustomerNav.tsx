@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { Dictionary } from '@/lib/i18n/dictionaries';
-import type { Locale } from '@/lib/i18n/config';
+import type { Dictionary } from '@/shared/i18n/dictionaries';
+import type { Locale } from '@/shared/i18n/config';
 
 interface CustomerNavProps {
   locale: Locale;

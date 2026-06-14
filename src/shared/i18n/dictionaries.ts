@@ -1,6 +1,6 @@
 import es from '@/messages/es';
 import en from '@/messages/en';
-import { defaultLocale, type Locale } from '@/lib/i18n/config';
+import { defaultLocale, type Locale } from '@/shared/i18n/config';
 
 const dictionaries = {
   es,

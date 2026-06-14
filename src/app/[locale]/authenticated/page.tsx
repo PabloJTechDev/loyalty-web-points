@@ -1,10 +1,10 @@
 import Link from 'next/link';
-import { CustomerCard } from '@/features/customer/components/CustomerCard';
-import { CustomerPageHeader } from '@/features/customer/components/CustomerPageHeader';
-import { getDictionary } from '@/lib/i18n/dictionaries';
-import { getDemoSession } from '@/lib/auth/session';
-import { getCustomerLoginTraceByLoginId } from '@/lib/api/customer';
-import { formatDate } from '@/lib/i18n/format';
+import { CustomerCard } from '@/shared/ui/CustomerCard';
+import { CustomerPageHeader } from '@/shared/ui/CustomerPageHeader';
+import { getDictionary } from '@/shared/i18n/dictionaries';
+import { getDemoSession } from '@/shared/auth/session';
+import { getCustomerLoginTraceByLoginId } from '@/shared/api/customer';
+import { formatDate } from '@/shared/i18n/format';
 
 export default async function AuthenticatedHomePage({
   params,

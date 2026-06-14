@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { DEMO_SESSION_COOKIE } from '@/lib/auth/session';
-import { defaultLocale, isLocale } from '@/lib/i18n/config';
+import { DEMO_SESSION_COOKIE } from '@/shared/auth/session';
+import { defaultLocale, isLocale } from '@/shared/i18n/config';
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

@@ -1,16 +1,16 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getDemoSession } from '@/lib/auth/session';
-import { getCustomerHome } from '@/lib/api/customer';
-import { CustomerBadge } from '@/features/customer/components/CustomerBadge';
-import { CustomerCard } from '@/features/customer/components/CustomerCard';
-import { MetricCard } from '@/features/customer/components/MetricCard';
-import { CustomerShell } from '@/features/customer/components/CustomerShell';
-import { SectionTitle } from '@/features/customer/components/SectionTitle';
-import { getDictionary } from '@/lib/i18n/dictionaries';
-import { isLocale } from '@/lib/i18n/config';
-import { formatDate, formatPoints } from '@/lib/i18n/format';
+import { getDemoSession } from '@/shared/auth/session';
+import { getCustomerHome } from '@/shared/api/customer';
+import { CustomerBadge } from '@/shared/ui/CustomerBadge';
+import { CustomerCard } from '@/shared/ui/CustomerCard';
+import { MetricCard } from '@/shared/ui/MetricCard';
+import { CustomerShell } from '@/shared/ui/CustomerShell';
+import { SectionTitle } from '@/shared/ui/SectionTitle';
+import { getDictionary } from '@/shared/i18n/dictionaries';
+import { isLocale } from '@/shared/i18n/config';
+import { formatDate, formatPoints } from '@/shared/i18n/format';
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

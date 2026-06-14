@@ -1,11 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { CustomerCard } from '@/features/customer/components/CustomerCard';
-import { CustomerPageHeader } from '@/features/customer/components/CustomerPageHeader';
-import { CustomerShell } from '@/features/customer/components/CustomerShell';
-import { getCustomerPasswordChangeTraceByRequestId } from '@/lib/api/customer';
-import { getDictionary } from '@/lib/i18n/dictionaries';
-import { isLocale } from '@/lib/i18n/config';
+import { CustomerCard } from '@/shared/ui/CustomerCard';
+import { CustomerPageHeader } from '@/shared/ui/CustomerPageHeader';
+import { CustomerShell } from '@/shared/ui/CustomerShell';
+import { getCustomerPasswordChangeTraceByRequestId } from '@/shared/api/customer';
+import { getDictionary } from '@/shared/i18n/dictionaries';
+import { isLocale } from '@/shared/i18n/config';
 
 function formatTimestamp(value: string, locale: string) {
   return new Intl.DateTimeFormat(locale === 'es' ? 'es-CL' : 'en-US', {

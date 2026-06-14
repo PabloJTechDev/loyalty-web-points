@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
-import { getDictionary } from '@/lib/i18n/dictionaries';
-import { requireDemoSession } from '@/lib/auth/guards';
-import { isLocale } from '@/lib/i18n/config';
-import { CustomerShell } from '@/features/customer/components/CustomerShell';
+import { getDictionary } from '@/shared/i18n/dictionaries';
+import { requireDemoSession } from '@/shared/auth/guards';
+import { isLocale } from '@/shared/i18n/config';
+import { CustomerShell } from '@/shared/ui/CustomerShell';
 
 export default async function AuthenticatedLayout({
   children,

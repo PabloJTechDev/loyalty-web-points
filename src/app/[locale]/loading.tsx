@@ -1,7 +1,7 @@
-import { getDictionary } from '@/lib/i18n/dictionaries';
-import { defaultLocale, isLocale } from '@/lib/i18n/config';
-import { CustomerShell } from '@/features/customer/components/CustomerShell';
-import { LoadingState } from '@/features/customer/components/state/LoadingState';
+import { getDictionary } from '@/shared/i18n/dictionaries';
+import { defaultLocale, isLocale } from '@/shared/i18n/config';
+import { CustomerShell } from '@/shared/ui/CustomerShell';
+import { LoadingState } from '@/shared/ui/state/LoadingState';
 
 export default async function Loading({
   params,

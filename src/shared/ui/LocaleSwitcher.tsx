@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { locales, type Locale } from '@/lib/i18n/config';
+import { locales, type Locale } from '@/shared/i18n/config';
 
 interface LocaleSwitcherProps {
   locale: Locale;

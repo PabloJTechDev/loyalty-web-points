@@ -1,6 +1,6 @@
-import { customerHomeFallback } from '@/lib/mocks/customer-home';
-import { customerProfileSummaryFallback } from '@/lib/mocks/customer-profile-summary';
-import { customerWalletFallback } from '@/lib/mocks/customer-wallet';
+import { customerHomeFallback } from '@/shared/mocks/customer-home';
+import { customerProfileSummaryFallback } from '@/shared/mocks/customer-profile-summary';
+import { customerWalletFallback } from '@/shared/mocks/customer-wallet';
 
 const baseUrl = process.env.BFF_POINTS_BASE_URL ?? 'http://localhost:3002';
 

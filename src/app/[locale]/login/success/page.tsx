@@ -1,11 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { CustomerCard } from '@/features/customer/components/CustomerCard';
-import { CustomerPageHeader } from '@/features/customer/components/CustomerPageHeader';
-import { CustomerShell } from '@/features/customer/components/CustomerShell';
-import { getDemoSession } from '@/lib/auth/session';
-import { getDictionary } from '@/lib/i18n/dictionaries';
-import { isLocale } from '@/lib/i18n/config';
+import { CustomerCard } from '@/shared/ui/CustomerCard';
+import { CustomerPageHeader } from '@/shared/ui/CustomerPageHeader';
+import { CustomerShell } from '@/shared/ui/CustomerShell';
+import { getDemoSession } from '@/shared/auth/session';
+import { getDictionary } from '@/shared/i18n/dictionaries';
+import { isLocale } from '@/shared/i18n/config';
 
 export default async function LoginSuccessPage({
   params,

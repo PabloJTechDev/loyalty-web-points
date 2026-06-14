@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getDictionary } from '@/lib/i18n/dictionaries';
-import { locales, isLocale } from '@/lib/i18n/config';
+import { getDictionary } from '@/shared/i18n/dictionaries';
+import { locales, isLocale } from '@/shared/i18n/config';
 
 export async function generateStaticParams() {
   return locales.map((locale) => ({ locale }));

@@ -1,13 +1,13 @@
 import { notFound } from 'next/navigation';
-import { getDemoSession } from '@/lib/auth/session';
-import { getCustomerProfileSummary } from '@/lib/api/customer';
-import { CustomerCard } from '@/features/customer/components/CustomerCard';
-import { CustomerPageHeader } from '@/features/customer/components/CustomerPageHeader';
-import { CustomerShell } from '@/features/customer/components/CustomerShell';
-import { SectionTitle } from '@/features/customer/components/SectionTitle';
-import { getDictionary } from '@/lib/i18n/dictionaries';
-import { isLocale } from '@/lib/i18n/config';
-import { formatDate } from '@/lib/i18n/format';
+import { getDemoSession } from '@/shared/auth/session';
+import { getCustomerProfileSummary } from '@/shared/api/customer';
+import { CustomerCard } from '@/shared/ui/CustomerCard';
+import { CustomerPageHeader } from '@/shared/ui/CustomerPageHeader';
+import { CustomerShell } from '@/shared/ui/CustomerShell';
+import { SectionTitle } from '@/shared/ui/SectionTitle';
+import { getDictionary } from '@/shared/i18n/dictionaries';
+import { isLocale } from '@/shared/i18n/config';
+import { formatDate } from '@/shared/i18n/format';
 
 export default async function ProfileSummaryPage({
   params,

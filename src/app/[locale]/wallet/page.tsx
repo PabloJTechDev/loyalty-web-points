@@ -1,15 +1,15 @@
 import { notFound } from 'next/navigation';
-import { getDemoSession } from '@/lib/auth/session';
-import { getCustomerLoginTraceByLoginId, getCustomerWallet, getPointsBalance, getPointsTransactions } from '@/lib/api/customer';
-import { CustomerCard } from '@/features/customer/components/CustomerCard';
-import { CustomerPageHeader } from '@/features/customer/components/CustomerPageHeader';
-import { CustomerShell } from '@/features/customer/components/CustomerShell';
-import { MetricCard } from '@/features/customer/components/MetricCard';
-import { SectionTitle } from '@/features/customer/components/SectionTitle';
-import { EmptyState } from '@/features/customer/components/state/EmptyState';
-import { getDictionary } from '@/lib/i18n/dictionaries';
-import { isLocale } from '@/lib/i18n/config';
-import { formatDate, formatPoints } from '@/lib/i18n/format';
+import { getDemoSession } from '@/shared/auth/session';
+import { getCustomerLoginTraceByLoginId, getCustomerWallet, getPointsBalance, getPointsTransactions } from '@/shared/api/customer';
+import { CustomerCard } from '@/shared/ui/CustomerCard';
+import { CustomerPageHeader } from '@/shared/ui/CustomerPageHeader';
+import { CustomerShell } from '@/shared/ui/CustomerShell';
+import { MetricCard } from '@/shared/ui/MetricCard';
+import { SectionTitle } from '@/shared/ui/SectionTitle';
+import { EmptyState } from '@/shared/ui/state/EmptyState';
+import { getDictionary } from '@/shared/i18n/dictionaries';
+import { isLocale } from '@/shared/i18n/config';
+import { formatDate, formatPoints } from '@/shared/i18n/format';
 
 export default async function WalletPage({
   params,

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { CustomerBadge } from '@/features/customer/components/CustomerBadge';
+import { CustomerBadge } from '@/shared/ui/CustomerBadge';
 
 interface CustomerPageHeaderProps {
   badge: string;

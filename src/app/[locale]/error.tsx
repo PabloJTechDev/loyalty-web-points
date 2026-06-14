@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { ErrorState } from '@/features/customer/components/state/ErrorState';
+import { ErrorState } from '@/shared/ui/state/ErrorState';
 
 export default function Error({
   error,

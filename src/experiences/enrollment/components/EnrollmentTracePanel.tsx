@@ -1,7 +1,7 @@
-import { CustomerCard } from '@/features/customer/components/CustomerCard';
-import { SectionTitle } from '@/features/customer/components/SectionTitle';
-import type { Locale } from '@/lib/i18n/config';
-import type { CustomerEnrollmentTraceListResponse } from '@/lib/api/customer';
+import { CustomerCard } from '@/shared/ui/CustomerCard';
+import { SectionTitle } from '@/shared/ui/SectionTitle';
+import type { Locale } from '@/shared/i18n/config';
+import type { CustomerEnrollmentTraceListResponse } from '@/shared/api/customer';
 
 interface EnrollmentTracePanelProps {
   locale: Locale;
