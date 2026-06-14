@@ -91,6 +91,24 @@ Key files:
 
 ---
 
+## Shared Package
+
+i18n, auth helpers, Prometheus metrics, and common UI components are consumed from the shared package:
+
+```json
+"@pablojtech/loyalty-shared-web": "github:PabloJTechDev/loyalty-shared-web#main"
+```
+
+| Module | Provides |
+|---|---|
+| `/i18n` | `Locale`, `getDictionary`, `formatDate`, `formatPoints` |
+| `/auth` | `DemoSession`, `getDemoSession` |
+| `/metrics` | `businessTransactionsTotal`, `observeRequest` |
+| `/ui` | `MetricCard`, `SectionTitle`, `LocaleSwitcher` |
+| `/ui/state` | `EmptyState`, `ErrorState`, `LoadingState` |
+
+---
+
 ## Architecture notes
 
 Frontend structure follows a **feature-based modular approach**.
