@@ -1,10 +1,10 @@
 import Link from 'next/link';
 import { CustomerCard } from '@/shared/ui/CustomerCard';
 import { CustomerPageHeader } from '@/shared/ui/CustomerPageHeader';
-import { getDictionary } from '@/shared/i18n/dictionaries';
-import { getDemoSession } from '@/shared/auth/session';
+import { getDictionary } from '@pablojtech/loyalty-shared-web/i18n';
+import { getDemoSession } from '@pablojtech/loyalty-shared-web/auth';
 import { getCustomerLoginTraceByLoginId } from '@/shared/api/customer';
-import { formatDate } from '@/shared/i18n/format';
+import { formatDate } from '@pablojtech/loyalty-shared-web/i18n';
 
 export default async function AuthenticatedHomePage({
   params,

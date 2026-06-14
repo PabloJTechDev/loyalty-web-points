@@ -1,4 +1,4 @@
-import { DEMO_SESSION_COOKIE } from '@/shared/auth/session';
+import { DEMO_SESSION_COOKIE } from '@pablojtech/loyalty-shared-web/auth';
 import { proxy } from './proxy';
 
 function createRequest(url: string, cookieValue?: string) {

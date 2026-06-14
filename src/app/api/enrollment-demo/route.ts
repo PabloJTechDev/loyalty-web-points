@@ -3,12 +3,12 @@ import {
   DEMO_SESSION_COOKIE,
   DEMO_SESSION_MAX_AGE_SECONDS,
   encodeDemoSession,
-} from '@/shared/auth/session';
+} from '@pablojtech/loyalty-shared-web/auth';
 import {
   businessTransactionsTotal,
   observeRequest,
-} from '@/shared/metrics/metrics';
-import { defaultLocale, isLocale } from '@/shared/i18n/config';
+} from '@pablojtech/loyalty-shared-web/metrics';
+import { defaultLocale, isLocale } from '@pablojtech/loyalty-shared-web/i18n';
 
 const bffBaseUrl = process.env.BFF_POINTS_BASE_URL ?? 'http://localhost:3002';
 

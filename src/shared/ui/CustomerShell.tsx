@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { CustomerNav } from '@/shared/ui/CustomerNav';
-import { LocaleSwitcher } from '@/shared/ui/LocaleSwitcher';
-import type { Dictionary } from '@/shared/i18n/dictionaries';
-import type { Locale } from '@/shared/i18n/config';
+import { LocaleSwitcher } from '@pablojtech/loyalty-shared-web/ui';
+import type { Dictionary } from '@pablojtech/loyalty-shared-web/i18n';
+import type { Locale } from '@pablojtech/loyalty-shared-web/i18n';
 
 interface CustomerShellProps {
   children: ReactNode;

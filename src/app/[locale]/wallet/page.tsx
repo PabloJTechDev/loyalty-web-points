@@ -1,15 +1,15 @@
 import { notFound } from 'next/navigation';
-import { getDemoSession } from '@/shared/auth/session';
+import { getDemoSession } from '@pablojtech/loyalty-shared-web/auth';
 import { getCustomerLoginTraceByLoginId, getCustomerWallet, getPointsBalance, getPointsTransactions } from '@/shared/api/customer';
 import { CustomerCard } from '@/shared/ui/CustomerCard';
 import { CustomerPageHeader } from '@/shared/ui/CustomerPageHeader';
 import { CustomerShell } from '@/shared/ui/CustomerShell';
-import { MetricCard } from '@/shared/ui/MetricCard';
-import { SectionTitle } from '@/shared/ui/SectionTitle';
-import { EmptyState } from '@/shared/ui/state/EmptyState';
-import { getDictionary } from '@/shared/i18n/dictionaries';
-import { isLocale } from '@/shared/i18n/config';
-import { formatDate, formatPoints } from '@/shared/i18n/format';
+import { MetricCard } from '@pablojtech/loyalty-shared-web/ui';
+import { SectionTitle } from '@pablojtech/loyalty-shared-web/ui';
+import { EmptyState } from '@pablojtech/loyalty-shared-web/ui/state';
+import { getDictionary } from '@pablojtech/loyalty-shared-web/i18n';
+import { isLocale } from '@pablojtech/loyalty-shared-web/i18n';
+import { formatDate, formatPoints } from '@pablojtech/loyalty-shared-web/i18n';
 
 export default async function WalletPage({
   params,

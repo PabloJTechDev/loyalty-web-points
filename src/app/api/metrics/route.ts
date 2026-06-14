@@ -1,4 +1,4 @@
-import { metricsRegistry } from '@/shared/metrics/metrics';
+import { metricsRegistry } from '@pablojtech/loyalty-shared-web/metrics';
 
 export async function GET() {
   const body = await metricsRegistry.metrics();

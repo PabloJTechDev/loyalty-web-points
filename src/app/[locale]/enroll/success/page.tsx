@@ -3,8 +3,8 @@ import { notFound } from 'next/navigation';
 import { CustomerCard } from '@/shared/ui/CustomerCard';
 import { CustomerPageHeader } from '@/shared/ui/CustomerPageHeader';
 import { CustomerShell } from '@/shared/ui/CustomerShell';
-import { getDictionary } from '@/shared/i18n/dictionaries';
-import { isLocale } from '@/shared/i18n/config';
+import { getDictionary } from '@pablojtech/loyalty-shared-web/i18n';
+import { isLocale } from '@pablojtech/loyalty-shared-web/i18n';
 
 export default async function EnrollSuccessPage({
   params,

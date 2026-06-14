@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@/shared/i18n/config": ["./node_modules/@pablojtech/loyalty-shared-web/src/i18n/config"]
     }
   },
   "include": [

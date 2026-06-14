@@ -1,13 +1,13 @@
 import { notFound } from 'next/navigation';
-import { getDemoSession } from '@/shared/auth/session';
+import { getDemoSession } from '@pablojtech/loyalty-shared-web/auth';
 import { getCustomerProfileSummary } from '@/shared/api/customer';
 import { CustomerCard } from '@/shared/ui/CustomerCard';
 import { CustomerPageHeader } from '@/shared/ui/CustomerPageHeader';
 import { CustomerShell } from '@/shared/ui/CustomerShell';
-import { SectionTitle } from '@/shared/ui/SectionTitle';
-import { getDictionary } from '@/shared/i18n/dictionaries';
-import { isLocale } from '@/shared/i18n/config';
-import { formatDate } from '@/shared/i18n/format';
+import { SectionTitle } from '@pablojtech/loyalty-shared-web/ui';
+import { getDictionary } from '@pablojtech/loyalty-shared-web/i18n';
+import { isLocale } from '@pablojtech/loyalty-shared-web/i18n';
+import { formatDate } from '@pablojtech/loyalty-shared-web/i18n';
 
 export default async function ProfileSummaryPage({
   params,

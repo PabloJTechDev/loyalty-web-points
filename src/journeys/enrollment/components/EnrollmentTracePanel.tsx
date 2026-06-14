@@ -1,6 +1,6 @@
 import { CustomerCard } from '@/shared/ui/CustomerCard';
-import { SectionTitle } from '@/shared/ui/SectionTitle';
-import type { Locale } from '@/shared/i18n/config';
+import { SectionTitle } from '@pablojtech/loyalty-shared-web/ui';
+import type { Locale } from '@pablojtech/loyalty-shared-web/i18n';
 import type { CustomerEnrollmentTraceListResponse } from '@/shared/api/customer';
 
 interface EnrollmentTracePanelProps {

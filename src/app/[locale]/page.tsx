@@ -1,16 +1,16 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getDemoSession } from '@/shared/auth/session';
+import { getDemoSession } from '@pablojtech/loyalty-shared-web/auth';
 import { getCustomerHome } from '@/shared/api/customer';
 import { CustomerBadge } from '@/shared/ui/CustomerBadge';
 import { CustomerCard } from '@/shared/ui/CustomerCard';
-import { MetricCard } from '@/shared/ui/MetricCard';
+import { MetricCard } from '@pablojtech/loyalty-shared-web/ui';
 import { CustomerShell } from '@/shared/ui/CustomerShell';
-import { SectionTitle } from '@/shared/ui/SectionTitle';
-import { getDictionary } from '@/shared/i18n/dictionaries';
-import { isLocale } from '@/shared/i18n/config';
-import { formatDate, formatPoints } from '@/shared/i18n/format';
+import { SectionTitle } from '@pablojtech/loyalty-shared-web/ui';
+import { getDictionary } from '@pablojtech/loyalty-shared-web/i18n';
+import { isLocale } from '@pablojtech/loyalty-shared-web/i18n';
+import { formatDate, formatPoints } from '@pablojtech/loyalty-shared-web/i18n';
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

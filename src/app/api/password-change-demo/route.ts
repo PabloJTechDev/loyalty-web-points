@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import {
   businessTransactionsTotal,
   observeRequest,
-} from '@/shared/metrics/metrics';
-import { defaultLocale, isLocale } from '@/shared/i18n/config';
+} from '@pablojtech/loyalty-shared-web/metrics';
+import { defaultLocale, isLocale } from '@pablojtech/loyalty-shared-web/i18n';
 
 const bffBaseUrl = process.env.BFF_POINTS_BASE_URL ?? 'http://localhost:3002';
 

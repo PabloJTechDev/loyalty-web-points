@@ -1,4 +1,4 @@
-import { DEMO_SESSION_COOKIE } from '@/shared/auth/session';
+import { DEMO_SESSION_COOKIE } from '@pablojtech/loyalty-shared-web/auth';
 import { POST } from './route';
 
 function buildRequest(fields: Record<string, string>) {

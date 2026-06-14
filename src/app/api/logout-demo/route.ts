@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { DEMO_SESSION_COOKIE } from '@/shared/auth/session';
-import { observeRequest } from '@/shared/metrics/metrics';
-import { defaultLocale, isLocale } from '@/shared/i18n/config';
+import { DEMO_SESSION_COOKIE } from '@pablojtech/loyalty-shared-web/auth';
+import { observeRequest } from '@pablojtech/loyalty-shared-web/metrics';
+import { defaultLocale, isLocale } from '@pablojtech/loyalty-shared-web/i18n';
 
 export async function POST(request: Request) {
   const startedAt = performance.now();
